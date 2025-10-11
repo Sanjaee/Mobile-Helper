@@ -1,0 +1,112 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../presentation/splash/splash_page.dart';
+import '../presentation/auth/login_page.dart';
+import '../presentation/auth/register_page.dart';
+import '../presentation/auth/verify_otp_page.dart';
+import '../presentation/auth/reset_password_page.dart';
+import '../presentation/auth/change_password_page.dart';
+import '../presentation/auth/update_password_page.dart';
+import '../presentation/home/home_page.dart';
+
+class AppRoutes {
+  static const String splash = '/';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String verifyOtp = '/verify-otp';
+  static const String resetPassword = '/reset-password';
+  static const String changePassword = '/change-password';
+  static const String updatePassword = '/update-password';
+  static const String home = '/home';
+
+  static final GoRouter router = GoRouter(
+    initialLocation: splash,
+    routes: [
+      // Splash route
+      GoRoute(
+        path: splash,
+        name: 'splash',
+        builder: (context, state) => const SplashPage(),
+      ),
+
+      // Auth routes
+      GoRoute(
+        path: login,
+        name: 'login',
+        builder: (context, state) => const LoginPage(),
+      ),
+
+      GoRoute(
+        path: register,
+        name: 'register',
+        builder: (context, state) => const RegisterPage(),
+      ),
+
+      GoRoute(
+        path: verifyOtp,
+        name: 'verify-otp',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          final isPasswordReset =
+              state.uri.queryParameters['isPasswordReset'] == 'true';
+          return VerifyOTPPage(email: email, isPasswordReset: isPasswordReset);
+        },
+      ),
+
+      GoRoute(
+        path: resetPassword,
+        name: 'reset-password',
+        builder: (context, state) => const ResetPasswordPage(),
+      ),
+
+      GoRoute(
+        path: changePassword,
+        name: 'change-password',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          final otpCode = state.uri.queryParameters['otpCode'] ?? '';
+          return ChangePasswordPage(email: email, otpCode: otpCode);
+        },
+      ),
+
+      GoRoute(
+        path: updatePassword,
+        name: 'update-password',
+        builder: (context, state) => const UpdatePasswordPage(),
+      ),
+
+      // Home route
+      GoRoute(
+        path: home,
+        name: 'home',
+        builder: (context, state) => const HomePage(),
+      ),
+    ],
+    errorBuilder:
+        (context, state) => Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Page not found',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'The page you are looking for does not exist.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/'),
+                  child: const Text('Go Home'),
+                ),
+              ],
+            ),
+          ),
+        ),
+  );
+}
