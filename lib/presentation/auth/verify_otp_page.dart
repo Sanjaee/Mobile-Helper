@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/widgets/custom_button.dart';
-import '../../core/widgets/custom_text_field.dart';
+import '../../core/widgets/otp_input_field.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/navigation.dart';
 import '../../data/services/auth_service.dart';
@@ -24,18 +24,28 @@ class VerifyOTPPage extends StatefulWidget {
 
 class _VerifyOTPPageState extends State<VerifyOTPPage> {
   final _formKey = GlobalKey<FormState>();
-  final _otpController = TextEditingController();
+  final GlobalKey<OTPInputFieldState> _otpKey = GlobalKey<OTPInputFieldState>();
   bool _isLoading = false;
   bool _isResending = false;
+  String _currentOTP = '';
 
   @override
   void dispose() {
-    _otpController.dispose();
     super.dispose();
   }
 
-  Future<void> _verifyOTP() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _verifyOTP([String? otpCode]) async {
+    final otp = otpCode ?? _currentOTP;
+
+    if (otp.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 6-digit OTP'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -45,10 +55,7 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
       if (widget.isPasswordReset) {
         // For password reset, verify OTP first then navigate to change password
         final authService = AuthService();
-        final request = OTPVerifyRequest(
-          email: widget.email,
-          otpCode: _otpController.text.trim(),
-        );
+        final request = OTPVerifyRequest(email: widget.email, otpCode: otp);
 
         await authService.verifyOTPResetPassword(request);
 
@@ -62,16 +69,13 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
           // Navigate to change password page with email and OTP
           NavigationHelper.pushTo(
             context,
-            '/change-password?email=${widget.email}&otpCode=${_otpController.text.trim()}',
+            '/change-password?email=${widget.email}&otpCode=$otp',
           );
         }
       } else {
         // Regular OTP verification for registration
         final authService = AuthService();
-        final request = OTPVerifyRequest(
-          email: widget.email,
-          otpCode: _otpController.text.trim(),
-        );
+        final request = OTPVerifyRequest(email: widget.email, otpCode: otp);
 
         await authService.verifyOTP(request);
 
@@ -110,6 +114,8 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
               backgroundColor: AppColors.error,
             ),
           );
+          // Clear OTP on error
+          _otpKey.currentState?.clear();
         }
       }
     } finally {
@@ -137,6 +143,8 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
             backgroundColor: AppColors.success,
           ),
         );
+        // Clear current OTP input
+        _otpKey.currentState?.clear();
       }
     } catch (e) {
       if (mounted) {
@@ -160,16 +168,6 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => NavigationHelper.goBack(context),
-        ),
-        title: Text('Verify OTP', style: AppTextStyles.h3),
-        centerTitle: true,
-      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -178,40 +176,59 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Back button
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: AppColors.textPrimary,
+                      ),
+                      onPressed: () => NavigationHelper.goBack(context),
+                    ),
+                  ],
+                ),
+
                 const Spacer(),
 
                 // Icon
                 Container(
-                  width: 80,
-                  height: 80,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
                     shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary, width: 2),
                   ),
-                  child: const Icon(
-                    Icons.email_outlined,
-                    color: AppColors.textOnPrimary,
-                    size: 40,
+                  child: Icon(
+                    widget.isPasswordReset
+                        ? Icons.lock_reset
+                        : Icons.sms_outlined,
+                    color: AppColors.primary,
+                    size: 30,
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // Title
                 Text(
-                  'Check Your Email',
-                  style: AppTextStyles.h2,
+                  'Masukkan Kode Verifikasi',
+                  style: AppTextStyles.h2.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 // Description
                 Text(
                   widget.isPasswordReset
-                      ? 'We\'ve sent a password reset code to ${widget.email}'
-                      : 'We\'ve sent a verification code to ${widget.email}',
-                  style: AppTextStyles.bodyLarge.copyWith(
+                      ? 'Kode verifikasi telah dikirimkan melalui email ke ${widget.email}'
+                      : 'Kode verifikasi telah dikirimkan melalui email ke ${widget.email}',
+                  style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
@@ -219,57 +236,72 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
 
                 const SizedBox(height: 48),
 
-                // OTP field
-                CustomOTPField(
-                  controller: _otpController,
-                  validator: Validators.otp,
+                // OTP input field
+                OTPInputField(
+                  key: _otpKey,
+                  length: 6,
+                  onCompleted: _verifyOTP,
+                  onChanged: (value) {
+                    setState(() {
+                      _currentOTP = value;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 48),
+
+                // Verify button
+                Container(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed:
+                        _currentOTP.length == 6 && !_isLoading
+                            ? () => _verifyOTP(_currentOTP)
+                            : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: AppColors.border,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child:
+                        _isLoading
+                            ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : Text(
+                              'Verifikasi',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                  ),
                 ),
 
                 const SizedBox(height: 24),
 
-                // Verify button
-                CustomButton(
-                  text: 'Verify OTP',
-                  onPressed: _verifyOTP,
-                  isLoading: _isLoading,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Resend OTP
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Didn't receive the code? ",
-                      style: AppTextStyles.bodyMedium,
+                // Resend OTP with timer
+                Center(
+                  child: Text(
+                    "Mohon menunggu 60 detik untuk mengirim ulang",
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
-                    CustomTextButton(
-                      text: 'Resend',
-                      onPressed: _isResending ? null : _resendOTP,
-                      isLoading: _isResending,
-                    ),
-                  ],
+                  ),
                 ),
 
                 const Spacer(),
-
-                // Back to login
-                if (!widget.isPasswordReset)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Wrong email? ", style: AppTextStyles.bodyMedium),
-                      CustomTextButton(
-                        text: 'Go Back',
-                        onPressed: () {
-                          NavigationHelper.goBack(context);
-                        },
-                      ),
-                    ],
-                  ),
-
-                const SizedBox(height: 16),
               ],
             ),
           ),

@@ -3,6 +3,8 @@ import '../models/user_model.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/storage_helper.dart';
 import 'api_client.dart';
+import 'google_auth_service.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final ApiClient _apiClient = ApiClient();
@@ -165,7 +167,61 @@ class AuthService {
     }
   }
 
-  // Google OAuth
+  // Google Sign In with Google Sign In package
+  Future<AuthResponse> signInWithGoogle() async {
+    try {
+      // Sign in with Google
+      final GoogleSignInAccount? googleUser =
+          await GoogleAuthService.signInWithGoogle();
+
+      if (googleUser == null) {
+        throw Exception('Google Sign In was cancelled or failed');
+      }
+
+      // Get authentication details
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      if (googleAuth.accessToken == null) {
+        throw Exception('Failed to get Google access token');
+      }
+
+      // Create request for backend
+      final request = GoogleOAuthRequest(
+        email: googleUser.email,
+        fullName: googleUser.displayName ?? '',
+        profilePhoto: googleUser.photoUrl ?? '',
+        googleId: googleUser.id,
+      );
+
+      // Send to backend
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.googleOAuth,
+        data: request.toJson(),
+      );
+
+      if (response.statusCode == 200) {
+        final authResponse = AuthResponse.fromJson(response.data);
+
+        // Save tokens and user data
+        await StorageHelper.saveTokens(
+          accessToken: authResponse.accessToken,
+          refreshToken: authResponse.refreshToken,
+        );
+        await StorageHelper.saveUserData(authResponse.user.toJson().toString());
+
+        return authResponse;
+      } else {
+        throw Exception('Google OAuth failed');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    } catch (e) {
+      throw Exception('Google Sign In failed: $e');
+    }
+  }
+
+  // Google OAuth (for direct API calls)
   Future<AuthResponse> googleOAuth(GoogleOAuthRequest request) async {
     try {
       final response = await _apiClient.dio.post(

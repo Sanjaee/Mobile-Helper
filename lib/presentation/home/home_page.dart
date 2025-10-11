@@ -108,7 +108,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Welcome back! test',
+                            'Welcome back!',
                             style: AppTextStyles.h2.copyWith(
                               color: AppColors.textOnPrimary,
                             ),

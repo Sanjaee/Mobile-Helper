@@ -67,6 +67,43 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = AuthService();
+      await authService.signInWithGoogle();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Sign In successful!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        // Navigate to home page
+        NavigationHelper.goToAndClearStack(context, '/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -180,14 +217,7 @@ class _LoginPageState extends State<LoginPage> {
                 // Google OAuth button
                 CustomButton(
                   text: 'Continue with Google',
-                  onPressed: () {
-                    // TODO: Implement Google OAuth
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google OAuth not implemented yet'),
-                      ),
-                    );
-                  },
+                  onPressed: _signInWithGoogle,
                   isPrimary: false,
                 ),
 
