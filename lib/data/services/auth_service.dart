@@ -91,11 +91,14 @@ class AuthService {
   }
 
   // Resend OTP
-  Future<void> resendOTP(String email) async {
+  Future<void> resendOTP(String email, {String type = 'registration'}) async {
     try {
       final response = await _apiClient.dio.post(
         ApiEndpoints.resendOtp,
-        data: {'email': email},
+        data: {
+          'email': email,
+          'type': type,
+        },
       );
 
       if (response.statusCode != 200) {

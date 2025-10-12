@@ -1,9 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
-import '../../core/widgets/custom_button.dart';
 import '../../core/widgets/otp_input_field.dart';
-import '../../core/utils/validators.dart';
 import '../../core/utils/navigation.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/user_model.dart';
@@ -28,10 +27,33 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
   bool _isLoading = false;
   bool _isResending = false;
   String _currentOTP = '';
+  int _resendTimer = 0; // Start with 0 - button can be clicked immediately
+  Timer? _timer;
+  bool _hasResentOnce = false; // Track if user has clicked resend at least once
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
+    _timer?.cancel();
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendTimer = 60;
+    _hasResentOnce = true;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendTimer > 0) {
+        setState(() {
+          _resendTimer--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _verifyOTP([String? otpCode]) async {
@@ -134,7 +156,8 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
 
     try {
       final authService = AuthService();
-      await authService.resendOTP(widget.email);
+      final otpType = widget.isPasswordReset ? 'password_reset' : 'registration';
+      await authService.resendOTP(widget.email, type: otpType);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,6 +168,8 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
         );
         // Clear current OTP input
         _otpKey.currentState?.clear();
+        // Restart the timer
+        _startResendTimer();
       }
     } catch (e) {
       if (mounted) {
@@ -293,12 +318,34 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
 
                 // Resend OTP with timer
                 Center(
-                  child: Text(
-                    "Mohon menunggu 60 detik untuk mengirim ulang",
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  child: _resendTimer > 0
+                      ? Text(
+                          "Mohon menunggu ${_resendTimer} detik untuk mengirim ulang",
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        )
+                      : TextButton(
+                          onPressed: _isResending ? null : _resendOTP,
+                          child: _isResending
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  _hasResentOnce ? 'Kirim Ulang OTP' : 'Kirim Ulang OTP',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
                 ),
 
                 const Spacer(),
