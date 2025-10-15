@@ -59,8 +59,25 @@ class AuthService {
         throw Exception('Login failed');
       }
     } on DioException catch (e) {
+      // If backend returns 403 with EMAIL_NOT_VERIFIED, rethrow a typed signal
+      if (e.response?.statusCode == 403) {
+        final data = e.response?.data;
+        if (data is Map<String, dynamic>) {
+          final code = data['code']?.toString();
+          if (code == 'EMAIL_NOT_VERIFIED') {
+            // Attach email for convenience if present
+            final email = data['email']?.toString() ?? request.email;
+            throw EmailNotVerifiedException(email: email);
+          }
+        }
+      }
       throw _handleError(e);
     }
+  }
+
+  // Resend OTP then return success
+  Future<void> ensureOtpResentForUnverified(String email) async {
+    await resendOTP(email, type: 'registration');
   }
 
   // Verify OTP

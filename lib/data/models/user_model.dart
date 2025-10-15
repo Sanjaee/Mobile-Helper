@@ -102,6 +102,13 @@ class AuthResponse {
   }
 }
 
+class EmailNotVerifiedException implements Exception {
+  final String email;
+  EmailNotVerifiedException({required this.email});
+  @override
+  String toString() => 'EMAIL_NOT_VERIFIED';
+}
+
 class RegisterRequest {
   final String fullName;
   final String email;

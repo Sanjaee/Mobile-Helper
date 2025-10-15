@@ -35,6 +35,7 @@ class AppRoutes {
         name: 'login',
         builder: (context, state) => const LoginPage(),
       ),
+      // verify-otp route is declared below; keeping single declaration
 
       GoRoute(
         path: register,
@@ -48,7 +49,7 @@ class AppRoutes {
         builder: (context, state) {
           final email = state.uri.queryParameters['email'] ?? '';
           final isPasswordReset =
-              state.uri.queryParameters['isPasswordReset'] == 'true';
+              (state.uri.queryParameters['isPasswordReset'] ?? 'false') == 'true';
           return VerifyOTPPage(email: email, isPasswordReset: isPasswordReset);
         },
       ),

@@ -49,6 +49,26 @@ class _LoginPageState extends State<LoginPage> {
         // Navigate to home page
         NavigationHelper.goToAndClearStack(context, '/home');
       }
+    } on EmailNotVerifiedException catch (e) {
+      // Auto resend OTP and redirect to OTP page
+      final email = e.email;
+      try {
+        final authService = AuthService();
+        await authService.ensureOtpResentForUnverified(email);
+      } catch (_) {}
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email belum terverifikasi. OTP telah dikirim ulang.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        NavigationHelper.pushTo(
+          context,
+          '/verify-otp?email=$email&isPasswordReset=false',
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
