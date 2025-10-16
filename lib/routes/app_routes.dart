@@ -8,6 +8,10 @@ import '../presentation/auth/reset_password_page.dart';
 import '../presentation/auth/change_password_page.dart';
 import '../presentation/auth/update_password_page.dart';
 import '../presentation/home/home_page.dart';
+import '../presentation/client/client_home_page.dart';
+import '../presentation/service/service_home_page.dart';
+import '../presentation/client/client_map_full_page.dart';
+import '../presentation/service/service_map_full_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -18,6 +22,10 @@ class AppRoutes {
   static const String changePassword = '/change-password';
   static const String updatePassword = '/update-password';
   static const String home = '/home';
+  static const String clientHome = '/client-home';
+  static const String serviceHome = '/service-home';
+  static const String clientMap = '/client-map';
+  static const String serviceMap = '/service-map';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -81,6 +89,30 @@ class AppRoutes {
         path: home,
         name: 'home',
         builder: (context, state) => const HomePage(),
+      ),
+
+      // Role-based homes
+      GoRoute(
+        path: clientHome,
+        name: 'client-home',
+        builder: (context, state) => const ClientHomePage(),
+      ),
+      GoRoute(
+        path: serviceHome,
+        name: 'service-home',
+        builder: (context, state) => const ServiceHomePage(),
+      ),
+
+      // Full screen maps
+      GoRoute(
+        path: clientMap,
+        name: 'client-map',
+        builder: (context, state) => const ClientMapFullPage(),
+      ),
+      GoRoute(
+        path: serviceMap,
+        name: 'service-map',
+        builder: (context, state) => const ServiceMapFullPage(),
       ),
     ],
     errorBuilder:

@@ -43,11 +43,13 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      await authService.login(request);
+      final res = await authService.login(request);
 
       if (mounted) {
-        // Navigate to home page
-        NavigationHelper.goToAndClearStack(context, '/home');
+        final type = res.user.userType.toUpperCase();
+        final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
+        final target = isService ? '/service-home' : '/client-home';
+        NavigationHelper.goToAndClearStack(context, target);
       }
     } on EmailNotVerifiedException catch (e) {
       // Auto resend OTP and redirect to OTP page
@@ -94,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final authService = AuthService();
-      await authService.signInWithGoogle();
+      final res = await authService.signInWithGoogle();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,8 +105,10 @@ class _LoginPageState extends State<LoginPage> {
             backgroundColor: AppColors.success,
           ),
         );
-        // Navigate to home page
-        NavigationHelper.goToAndClearStack(context, '/home');
+        final type = res.user.userType.toUpperCase();
+        final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
+        final target = isService ? '/service-home' : '/client-home';
+        NavigationHelper.goToAndClearStack(context, target);
       }
     } catch (e) {
       if (mounted) {

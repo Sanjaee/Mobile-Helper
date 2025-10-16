@@ -26,6 +26,7 @@ class AuthService {
           refreshToken: authResponse.refreshToken,
         );
         await StorageHelper.saveUserData(authResponse.user.toJson().toString());
+        await StorageHelper.saveUserType(authResponse.user.userType);
 
         return authResponse;
       } else {
@@ -53,6 +54,7 @@ class AuthService {
           refreshToken: authResponse.refreshToken,
         );
         await StorageHelper.saveUserData(authResponse.user.toJson().toString());
+        await StorageHelper.saveUserType(authResponse.user.userType);
 
         return authResponse;
       } else {
@@ -97,6 +99,7 @@ class AuthService {
           refreshToken: authResponse.refreshToken,
         );
         await StorageHelper.saveUserData(authResponse.user.toJson().toString());
+        await StorageHelper.saveUserType(authResponse.user.userType);
 
         return authResponse;
       } else {
@@ -177,6 +180,7 @@ class AuthService {
           refreshToken: authResponse.refreshToken,
         );
         await StorageHelper.saveUserData(authResponse.user.toJson().toString());
+        await StorageHelper.saveUserType(authResponse.user.userType);
 
         return authResponse;
       } else {

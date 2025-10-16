@@ -5,6 +5,7 @@ class StorageHelper {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userDataKey = 'user_data';
   static const String _isLoggedInKey = 'is_logged_in';
+  static const String _userTypeKey = 'user_type';
   
   // Token management
   static Future<void> saveTokens({
@@ -48,6 +49,17 @@ class StorageHelper {
   static Future<void> clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userDataKey);
+  }
+
+  // Role management
+  static Future<void> saveUserType(String userType) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userTypeKey, userType.toUpperCase());
+  }
+
+  static Future<String?> getUserType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userTypeKey);
   }
   
   // Login status

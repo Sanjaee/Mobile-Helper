@@ -52,6 +52,9 @@ dependencies:
 
   # Google Sign In
   google_sign_in: ^6.2.1
+  
+  # Google Maps
+  google_maps_flutter: ^2.6.1
 
 dev_dependencies:
   flutter_test:

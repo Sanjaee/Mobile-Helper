@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
-import '../../core/utils/navigation.dart';
-import '../../data/services/auth_service.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/utils/storage_helper.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -19,28 +19,18 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _checkAuthStatus() async {
-    // Wait for 2 seconds to show splash screen
-    await Future.delayed(const Duration(seconds: 2));
-
-    try {
-      final authService = AuthService();
-      final isLoggedIn = await authService.isLoggedIn();
-
-      if (mounted) {
-        if (isLoggedIn) {
-          // User is logged in, go to home
-          NavigationHelper.goToAndClearStack(context, '/home');
-        } else {
-          // User is not logged in, go to login
-          NavigationHelper.goToAndClearStack(context, '/login');
-        }
-      }
-    } catch (e) {
-      // If there's an error, go to login page
-      if (mounted) {
-        NavigationHelper.goToAndClearStack(context, '/login');
-      }
+    await Future.delayed(const Duration(seconds: 1));
+    final loggedIn = await StorageHelper.isLoggedIn();
+    if (!mounted) return;
+    if (!loggedIn) {
+      context.go('/login');
+      return;
     }
+    final type = (await StorageHelper.getUserType())?.toUpperCase() ?? 'CLIENT';
+    final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
+    final target = isService ? '/service-home' : '/client-home';
+    if (!mounted) return;
+    context.go(target);
   }
 
   @override
