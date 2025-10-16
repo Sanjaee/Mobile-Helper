@@ -48,5 +48,7 @@
 	<!-- Google Maps API Key -->
 	<key>GMSApiKey</key>
 	<string>AIzaSyDc6TXmd_MiPsQhHwM8807iwp25WjdPTqQ</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to center the map near you.</string>
 </dict>
 </plist>

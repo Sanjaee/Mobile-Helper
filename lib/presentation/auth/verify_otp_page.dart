@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/widgets/otp_input_field.dart';
 import '../../core/utils/navigation.dart';
+import '../../core/utils/storage_helper.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/user_model.dart';
 
@@ -99,7 +100,7 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
         final authService = AuthService();
         final request = OTPVerifyRequest(email: widget.email, otpCode: otp);
 
-        await authService.verifyOTP(request);
+        final res = await authService.verifyOTP(request);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -108,8 +109,13 @@ class _VerifyOTPPageState extends State<VerifyOTPPage> {
               backgroundColor: AppColors.success,
             ),
           );
-          // Navigate to home page
-          NavigationHelper.goToAndClearStack(context, '/home');
+          // Navigate to role-based home
+          final type = (res.user.userType).toUpperCase();
+          // Persist normalized type just in case
+          await StorageHelper.saveUserType(type);
+          final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
+          final target = isService ? '/service-home' : '/client-home';
+          NavigationHelper.goToAndClearStack(context, target);
         }
       }
     } catch (e) {

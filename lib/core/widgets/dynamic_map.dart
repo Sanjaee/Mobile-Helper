@@ -8,6 +8,7 @@ class DynamicMap extends StatefulWidget {
   final Set<Polyline> polylines;
   final Set<Polygon> polygons;
   final void Function(GoogleMapController controller)? onMapCreated;
+  final bool zoomControlsEnabled;
 
   const DynamicMap({
     super.key,
@@ -17,6 +18,7 @@ class DynamicMap extends StatefulWidget {
     this.polylines = const {},
     this.polygons = const {},
     this.onMapCreated,
+    this.zoomControlsEnabled = false,
   });
 
   @override
@@ -38,6 +40,7 @@ class _DynamicMapState extends State<DynamicMap> {
       polygons: widget.polygons,
       myLocationEnabled: true,
       myLocationButtonEnabled: true,
+      zoomControlsEnabled: widget.zoomControlsEnabled,
       onMapCreated: (controller) {
         _controller = controller;
         widget.onMapCreated?.call(controller);

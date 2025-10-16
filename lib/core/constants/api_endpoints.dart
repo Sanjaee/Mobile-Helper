@@ -1,6 +1,6 @@
 class ApiEndpoints {
   // Base URL - API Gateway
-  static const String baseUrl = 'http://10.0.2.2:5000';
+  static const String baseUrl = 'http://192.168.194.248:5000';
 
   // Auth endpoints
   static const String register = '/api/v1/auth/register';
