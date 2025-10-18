@@ -3,6 +3,7 @@ import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/navigation.dart';
 import '../../data/services/auth_service.dart';
+import 'create_order_page.dart';
 
 class ClientHomePage extends StatelessWidget {
   const ClientHomePage({super.key});
@@ -41,6 +42,14 @@ class ClientHomePage extends StatelessWidget {
               crossAxisSpacing: 12,
               children: [
                 _MenuItem(
+                  icon: Icons.add_circle,
+                  label: 'Order',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CreateOrderPage()),
+                  ),
+                ),
+                _MenuItem(
                   icon: Icons.map,
                   label: 'Map',
                   onTap: () => NavigationHelper.pushTo(context, '/client-map'),
@@ -51,7 +60,6 @@ class ClientHomePage extends StatelessWidget {
                 _MenuItem(icon: Icons.fastfood, label: 'Food'),
                 _MenuItem(icon: Icons.local_taxi, label: 'Ride'),
                 _MenuItem(icon: Icons.build, label: 'Service'),
-                _MenuItem(icon: Icons.more_horiz, label: 'More'),
               ],
             ),
 
