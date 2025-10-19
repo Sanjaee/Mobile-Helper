@@ -102,13 +102,15 @@ class OTPInputFieldState extends State<OTPInputField> {
       return;
     }
 
-    setState(() {
-      _otp[index] = value;
-    });
-
-    widget.onChanged?.call(_otp.join());
-
+    // Handle input of new digit
     if (value.isNotEmpty) {
+      setState(() {
+        _otp[index] = value;
+      });
+
+      widget.onChanged?.call(_otp.join());
+
+      // Move to next field
       if (index < widget.length - 1) {
         _focusNodes[index + 1].requestFocus();
       } else {
@@ -117,6 +119,27 @@ class OTPInputFieldState extends State<OTPInputField> {
           widget.onCompleted(_otp.join());
         }
       }
+    }
+  }
+
+  void _handleBackspace(int currentIndex) {
+    // Find the last filled field
+    int lastFilledIndex = -1;
+    for (int i = widget.length - 1; i >= 0; i--) {
+      if (_otp[i].isNotEmpty) {
+        lastFilledIndex = i;
+        break;
+      }
+    }
+
+    // If found a filled field, clear it and focus on it
+    if (lastFilledIndex >= 0) {
+      setState(() {
+        _controllers[lastFilledIndex].clear();
+        _otp[lastFilledIndex] = '';
+      });
+      widget.onChanged?.call(_otp.join());
+      _focusNodes[lastFilledIndex].requestFocus();
     }
   }
 
@@ -167,55 +190,66 @@ class OTPInputFieldState extends State<OTPInputField> {
     return SizedBox(
       width: 40,
       height: 48,
-      child: TextFormField(
-        controller: _controllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          _OTPTextInputFormatter(),
-        ],
-        enabled: widget.enabled,
-        autofocus: widget.autoFocus && index == 0,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
-        ),
-        decoration: InputDecoration(
-          border: UnderlineInputBorder(
-            borderSide: BorderSide(
-              color:
-                  isFocused || hasValue ? AppColors.primary : AppColors.border,
-              width: isFocused ? 2 : 1,
-            ),
-          ),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: hasValue ? AppColors.primary : AppColors.border,
-              width: hasValue ? 2 : 1,
-            ),
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.primary, width: 2),
-          ),
-          contentPadding: EdgeInsets.zero,
-          counterText: '',
-        ),
-        onChanged: (value) => _onChanged(index, value),
-        onTap: () {
-          _controllers[index].selection = TextSelection.fromPosition(
-            TextPosition(offset: _controllers[index].text.length),
-          );
-        },
-        onEditingComplete: () {
-          if (index < widget.length - 1) {
-            _focusNodes[index + 1].requestFocus();
-          } else {
-            _focusNodes[index].unfocus();
+      child: RawKeyboardListener(
+        focusNode: FocusNode(skipTraversal: true),
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.backspace) {
+              // Handle backspace: always delete from the last filled field
+              _handleBackspace(index);
+            }
           }
         },
+        child: TextFormField(
+          controller: _controllers[index],
+          focusNode: _focusNodes[index],
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            _OTPTextInputFormatter(),
+          ],
+          enabled: widget.enabled,
+          autofocus: widget.autoFocus && index == 0,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color:
+                    isFocused || hasValue ? AppColors.primary : AppColors.border,
+                width: isFocused ? 2 : 1,
+              ),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: hasValue ? AppColors.primary : AppColors.border,
+                width: hasValue ? 2 : 1,
+              ),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            contentPadding: EdgeInsets.zero,
+            counterText: '',
+          ),
+          onChanged: (value) => _onChanged(index, value),
+          onTap: () {
+            _controllers[index].selection = TextSelection.fromPosition(
+              TextPosition(offset: _controllers[index].text.length),
+            );
+          },
+          onEditingComplete: () {
+            if (index < widget.length - 1) {
+              _focusNodes[index + 1].requestFocus();
+            } else {
+              _focusNodes[index].unfocus();
+            }
+          },
+        ),
       ),
     );
   }
