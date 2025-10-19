@@ -40,6 +40,7 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   void initState() {
     super.initState();
     _loadOrder();
+    _loadProviderLocation(); // Load initial provider location
     _connectToOrderWebSocket();
     _connectToLocationWebSocket();
   }
@@ -125,6 +126,9 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
       if (order['status'] == 'CANCELLED') {
         _handleOrderCancelled(order);
       }
+      
+      // Update markers with order data
+      _updateMarkers();
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -134,6 +138,30 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
           SnackBar(content: Text('Error loading order: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _loadProviderLocation() async {
+    try {
+      if (_order == null) {
+        // Wait a bit for order to load
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // Get provider location from location service
+      final location = await _locationService.getProviderLocation(widget.orderId);
+      
+      if (location.isNotEmpty) {
+        setState(() {
+          _providerLocation = location;
+        });
+        _updateMarkers();
+        
+        print('📍 Initial provider location loaded: ${location['latitude']}, ${location['longitude']}');
+      }
+    } catch (e) {
+      print('❌ Error loading provider location: $e');
+      // Non-critical error, just log it
     }
   }
 
@@ -175,6 +203,44 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
       // Load directions if we have provider location
       if (_providerLocation != null) {
         _loadDirections();
+        // Auto-zoom to show both markers
+        _fitMapToBothMarkers();
+      }
+    }
+  }
+
+  Future<void> _fitMapToBothMarkers() async {
+    if (_mapController != null && _order != null && _providerLocation != null) {
+      try {
+        final clientLat = _order!['service_latitude'];
+        final clientLng = _order!['service_longitude'];
+        final providerLat = _providerLocation!['latitude'];
+        final providerLng = _providerLocation!['longitude'];
+
+        // Calculate bounds
+        final southwest = LatLng(
+          clientLat < providerLat ? clientLat : providerLat,
+          clientLng < providerLng ? clientLng : providerLng,
+        );
+        
+        final northeast = LatLng(
+          clientLat > providerLat ? clientLat : providerLat,
+          clientLng > providerLng ? clientLng : providerLng,
+        );
+
+        final bounds = LatLngBounds(
+          southwest: southwest,
+          northeast: northeast,
+        );
+
+        // Animate camera to fit bounds with padding
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100), // 100 pixels padding
+        );
+
+        print('📍 Camera zoomed to fit both markers');
+      } catch (e) {
+        print('❌ Error fitting map to markers: $e');
       }
     }
   }
