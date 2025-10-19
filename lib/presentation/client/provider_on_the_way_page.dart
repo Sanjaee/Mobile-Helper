@@ -28,6 +28,7 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   bool _isLoading = true;
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
 
   @override
   void initState() {
@@ -100,7 +101,9 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
           ),
         };
         
-        // Add provider location if available
+        _polylines = {};
+        
+        // Add provider location and polyline if available
         if (_providerLocation != null) {
           _markers.add(
             Marker(
@@ -111,6 +114,26 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
               ),
               infoWindow: const InfoWindow(title: 'Provider Location'),
               icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            ),
+          );
+          
+          // Add polyline from provider to client
+          _polylines.add(
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: [
+                LatLng(
+                  _providerLocation!['latitude'],
+                  _providerLocation!['longitude'],
+                ),
+                LatLng(
+                  _order!['service_latitude'],
+                  _order!['service_longitude'],
+                ),
+              ],
+              color: Colors.blue,
+              width: 4,
+              patterns: [PatternItem.dash(20), PatternItem.gap(10)],
             ),
           );
         }
@@ -333,85 +356,84 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                           _mapController = controller;
                         },
                         markers: _markers,
+                        polylines: _polylines,
                       ),
                     ),
 
-                    // Status info
+                    // Minimal status info
                     Container(
                       padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 5,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         children: [
-                          const Icon(
-                            Icons.directions_car,
-                            size: 48,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Provider is on the way!',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Order #${_order!['order_number']}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Location info
-                          if (_location != null) ...[
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildInfoCard(
-                                  'Distance',
-                                  '${_location!['distance_km']?.toStringAsFixed(1) ?? 'N/A'} km',
-                                  Icons.straighten,
+                          // Status indicator
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                                _buildInfoCard(
-                                  'ETA',
-                                  '${_location!['estimated_arrival_minutes'] ?? 'N/A'} min',
-                                  Icons.access_time,
+                                child: const Icon(
+                                  Icons.directions_car,
+                                  size: 24,
+                                  color: Colors.green,
                                 ),
-                              ],
-                            ),
-                          ],
-
-                          const SizedBox(height: 16),
-
-                          // Order details
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Order Details',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Provider is on the way',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Order #${_order!['order_number']}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // ETA info
+                              if (_location != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_location!['estimated_arrival_minutes'] ?? 'N/A'} min',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(_order!['description']),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _order!['service_address'],
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 16),
-
                           // Cancel button
                           SizedBox(
                             width: double.infinity,
@@ -420,11 +442,15 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                elevation: 0,
                               ),
                               child: const Text(
                                 'Cancel Order',
-                                style: TextStyle(fontSize: 16),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
@@ -437,31 +463,4 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
     );
   }
 
-  Widget _buildInfoCard(String title, String value, IconData icon) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.green),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
