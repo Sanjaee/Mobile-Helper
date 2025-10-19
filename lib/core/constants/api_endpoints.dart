@@ -36,6 +36,11 @@ class ApiEndpoints {
   static const String getLocationHistory = '$baseUrl/api/v1/locations/order';
   static const String getProviderLocation = '$baseUrl/api/v1/locations/provider';
 
+  // WebSocket endpoints
+  static const String wsBaseUrl = 'ws://192.168.194.248:5000';
+  static const String wsOrders = '$wsBaseUrl/api/v1/ws/orders';
+  static const String wsLocations = '$wsBaseUrl/api/v1/ws/locations';
+
   // Health check
   static const String health = '/health';
 }

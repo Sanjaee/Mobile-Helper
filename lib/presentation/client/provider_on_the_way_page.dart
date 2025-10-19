@@ -6,6 +6,7 @@ import '../../data/services/order_service.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/order_state_service.dart';
 import '../../data/services/google_directions_service.dart';
+import '../../data/services/websocket_service.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/utils/jwt_utils.dart';
 
@@ -23,7 +24,10 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   final LocationService _locationService = LocationService();
   final OrderStateService _orderStateService = OrderStateService();
   final GoogleDirectionsService _directionsService = GoogleDirectionsService();
-  Timer? _timer;
+  final WebSocketService _wsOrderService = WebSocketService();
+  final WebSocketService _wsLocationService = WebSocketService();
+  StreamSubscription? _wsOrderSubscription;
+  StreamSubscription? _wsLocationSubscription;
   Map<String, dynamic>? _order;
   Map<String, dynamic>? _providerLocation;
   bool _isLoading = true;
@@ -36,7 +40,65 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   void initState() {
     super.initState();
     _loadOrder();
-    _startLocationPolling();
+    _connectToOrderWebSocket();
+    _connectToLocationWebSocket();
+  }
+
+  void _connectToOrderWebSocket() {
+    print('🔌 Connecting to Order WebSocket for: ${widget.orderId}');
+    _wsOrderSubscription = _wsOrderService.connectToOrder(widget.orderId).listen(
+      (message) {
+        final type = message['type'];
+        final data = message['data'];
+        
+        print('📩 Received Order WebSocket message: $type');
+        
+        switch (type) {
+          case 'order_arrived':
+            // Update order data
+            if (data != null) {
+              setState(() {
+                _order = Map<String, dynamic>.from(data);
+              });
+              _navigateToArrivedPage();
+            }
+            break;
+          case 'order_cancelled':
+            if (data != null) {
+              setState(() {
+                _order = Map<String, dynamic>.from(data);
+              });
+              _handleOrderCancelled(_order!);
+            }
+            break;
+        }
+      },
+      onError: (error) {
+        print('❌ Order WebSocket error: $error');
+      },
+    );
+  }
+
+  void _connectToLocationWebSocket() {
+    print('🔌 Connecting to Location WebSocket for: ${widget.orderId}');
+    _wsLocationSubscription = _wsLocationService.connectToLocation(widget.orderId).listen(
+      (message) {
+        final type = message['type'];
+        final data = message['data'];
+        
+        print('📩 Received Location WebSocket message: $type');
+        
+        if (type == 'location_update' && data != null) {
+          setState(() {
+            _providerLocation = Map<String, dynamic>.from(data);
+          });
+          _updateMarkers();
+        }
+      },
+      onError: (error) {
+        print('❌ Location WebSocket error: $error');
+      },
+    );
   }
 
   Future<void> _loadOrder() async {
@@ -191,26 +253,6 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
     }
   }
 
-  void _startLocationPolling() {
-    _loadProviderLocation();
-    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      _loadOrder();
-      _loadProviderLocation();
-    });
-  }
-
-  Future<void> _loadProviderLocation() async {
-    try {
-      final location = await _locationService.getProviderLocation(widget.orderId);
-      setState(() {
-        _providerLocation = location;
-      });
-      _updateMarkers();
-    } catch (e) {
-      // Provider location might not be available yet
-      print('Provider location not available: $e');
-    }
-  }
 
   void _navigateToArrivedPage() {
     if (mounted) {
@@ -220,8 +262,11 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
 
   void _handleOrderCancelled(Map<String, dynamic> order) async {
     if (mounted) {
-      // Cancel polling timer
-      _timer?.cancel();
+      // Disconnect WebSockets
+      _wsOrderSubscription?.cancel();
+      _wsLocationSubscription?.cancel();
+      _wsOrderService.disconnect();
+      _wsLocationService.disconnect();
       
       // Clear active order state
       await _orderStateService.clearActiveOrder();
@@ -316,8 +361,11 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
       );
 
       if (mounted) {
-        // Cancel polling timer
-        _timer?.cancel();
+        // Disconnect WebSockets
+        _wsOrderSubscription?.cancel();
+        _wsLocationSubscription?.cancel();
+        _wsOrderService.disconnect();
+        _wsLocationService.disconnect();
         
         // Clear active order state
         await _orderStateService.clearActiveOrder();
@@ -349,7 +397,10 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _wsOrderSubscription?.cancel();
+    _wsLocationSubscription?.cancel();
+    _wsOrderService.disconnect();
+    _wsLocationService.disconnect();
     _mapController?.dispose();
     super.dispose();
   }

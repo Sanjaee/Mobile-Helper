@@ -8,6 +8,7 @@ import '../../data/services/location_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/order_state_service.dart';
 import '../../data/services/google_directions_service.dart';
+import '../../data/services/websocket_service.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/utils/jwt_utils.dart';
 
@@ -26,8 +27,9 @@ class _NavigationPageState extends State<NavigationPage> {
   final AuthService _authService = AuthService();
   final OrderStateService _orderStateService = OrderStateService();
   final GoogleDirectionsService _directionsService = GoogleDirectionsService();
+  final WebSocketService _wsService = WebSocketService();
   Timer? _locationTimer;
-  Timer? _orderStatusTimer;
+  StreamSubscription? _wsSubscription;
   GoogleMapController? _mapController;
   Map<String, dynamic>? _order;
   Position? _currentPosition;
@@ -44,7 +46,44 @@ class _NavigationPageState extends State<NavigationPage> {
     _loadOrder();
     _getCurrentLocation();
     _startLocationTracking();
-    _startOrderStatusPolling();
+    _connectToOrderWebSocket();
+  }
+
+  void _connectToOrderWebSocket() {
+    print('🔌 Connecting to Order WebSocket for: ${widget.orderId}');
+    _wsSubscription = _wsService.connectToOrder(widget.orderId).listen(
+      (message) {
+        final type = message['type'];
+        final data = message['data'];
+        
+        print('📩 Received WebSocket message: $type');
+        
+        switch (type) {
+          case 'order_on_the_way':
+          case 'order_arrived':
+          case 'order_cancelled':
+            // Update order data
+            if (data != null) {
+              setState(() {
+                _order = Map<String, dynamic>.from(data);
+              });
+              
+              // Handle status changes
+              if (type == 'order_arrived') {
+                _navigateToArrivedPage();
+              } else if (type == 'order_cancelled') {
+                _handleOrderCancelled(_order!);
+              }
+            }
+            break;
+        }
+      },
+      onError: (error) {
+        print('❌ WebSocket error: $error');
+        // Fallback: reload order manually if WebSocket fails
+        _loadOrder();
+      },
+    );
   }
 
   Future<void> _loadOrder() async {
@@ -121,12 +160,6 @@ class _NavigationPageState extends State<NavigationPage> {
     });
   }
 
-  void _startOrderStatusPolling() {
-    _orderStatusTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      _loadOrder();
-    });
-  }
-
   Future<void> _updateLocation() async {
     try {
       final user = await _authService.getUserProfile();
@@ -177,9 +210,10 @@ class _NavigationPageState extends State<NavigationPage> {
 
   void _handleOrderCancelled(Map<String, dynamic> order) async {
     if (mounted) {
-      // Cancel polling timers
+      // Cancel timers and disconnect WebSocket
       _locationTimer?.cancel();
-      _orderStatusTimer?.cancel();
+      _wsSubscription?.cancel();
+      _wsService.disconnect();
       
       // Clear active order state
       await _orderStateService.clearActiveOrder();
@@ -274,9 +308,10 @@ class _NavigationPageState extends State<NavigationPage> {
       );
 
       if (mounted) {
-        // Cancel polling timers
+        // Cancel timers and disconnect WebSocket
         _locationTimer?.cancel();
-        _orderStatusTimer?.cancel();
+        _wsSubscription?.cancel();
+        _wsService.disconnect();
         
         // Clear active order state
         await _orderStateService.clearActiveOrder();
@@ -393,19 +428,19 @@ class _NavigationPageState extends State<NavigationPage> {
         print('Error loading directions: $e');
         // Fallback to straight line
         setState(() {
-          _polylines = {
-            Polyline(
-              polylineId: const PolylineId('route'),
-              points: [
-                LatLng(
-                  _currentPosition!.latitude,
-                  _currentPosition!.longitude,
-                ),
-                LatLng(
-                  _order!['service_latitude'],
-                  _order!['service_longitude'],
-                ),
-              ],
+        _polylines = {
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: [
+              LatLng(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+              ),
+              LatLng(
+                _order!['service_latitude'],
+                _order!['service_longitude'],
+              ),
+            ],
               color: const Color(0xFF00BFA5), // Gojek-like green color
               width: 6,
               patterns: [PatternItem.dash(30), PatternItem.gap(15)],
@@ -458,7 +493,8 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void dispose() {
     _locationTimer?.cancel();
-    _orderStatusTimer?.cancel();
+    _wsSubscription?.cancel();
+    _wsService.disconnect();
     _mapController?.dispose();
     super.dispose();
   }
@@ -645,7 +681,7 @@ class _NavigationPageState extends State<NavigationPage> {
                                   ),
                                 ],
                               ),
-                            ),
+                          ),
                           const SizedBox(height: 16),
 
                           // Action buttons
