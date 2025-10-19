@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/utils/storage_helper.dart';
+import '../../data/services/order_state_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -26,6 +27,18 @@ class _SplashPageState extends State<SplashPage> {
       context.go('/login');
       return;
     }
+
+    // Check for active orders first
+    final orderStateService = OrderStateService();
+    final activeOrderRoute = await orderStateService.checkActiveOrderAndGetRoute();
+    
+    if (activeOrderRoute != null) {
+      if (!mounted) return;
+      context.go(activeOrderRoute);
+      return;
+    }
+
+    // If no active order, proceed with normal navigation
     final type = (await StorageHelper.getUserType())?.toUpperCase() ?? 'CLIENT';
     final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
     final target = isService ? '/service-home' : '/client-home';

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../data/services/order_service.dart';
+import '../../data/services/order_state_service.dart';
+import '../../core/utils/storage_helper.dart';
+import '../../core/utils/jwt_utils.dart';
 import 'provider_on_the_way_page.dart';
 
 class WaitingProviderPage extends StatefulWidget {
@@ -14,6 +17,7 @@ class WaitingProviderPage extends StatefulWidget {
 
 class _WaitingProviderPageState extends State<WaitingProviderPage> {
   final OrderService _orderService = OrderService();
+  final OrderStateService _orderStateService = OrderStateService();
   Timer? _timer;
   Map<String, dynamic>? _order;
   bool _isLoading = true;
@@ -33,9 +37,21 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
         _isLoading = false;
       });
 
+      // Save active order state
+      await _orderStateService.saveActiveOrder(
+        orderId: widget.orderId,
+        status: order['status'],
+        userRole: 'client',
+      );
+
       // Check if order is accepted
       if (order['status'] == 'ACCEPTED') {
         _navigateToProviderOnTheWay();
+      }
+      
+      // Check if order is cancelled
+      if (order['status'] == 'CANCELLED') {
+        _handleOrderCancelled(order);
       }
     } catch (e) {
       setState(() {
@@ -66,6 +82,58 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
     }
   }
 
+  void _handleOrderCancelled(Map<String, dynamic> order) async {
+    if (mounted) {
+      // Clear active order state
+      await _orderStateService.clearActiveOrder();
+      
+      // Show cancellation popup
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Order Cancelled'),
+          content: Text(
+            order['cancellation_reason'] ?? 'This order has been cancelled.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.popUntil(context, (route) => route.isFirst); // Go to home
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showExitDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit Order'),
+        content: const Text('You cannot exit while waiting for a provider. You can only cancel the order.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _cancelOrder();
+            },
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _cancelOrder() {
     showDialog(
       context: context,
@@ -78,15 +146,78 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
             child: const Text('No'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.pop(context); // Go back to home
+              await _performCancelOrder();
             },
             child: const Text('Yes'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _performCancelOrder() async {
+    try {
+      print('🔄 Starting cancel order process...');
+      
+      // Get current user ID from JWT token
+      final token = await StorageHelper.getAccessToken();
+      if (token == null) {
+        throw Exception('No access token found');
+      }
+      
+      final userId = JwtUtils.getUserIdFromToken(token);
+      if (userId == null) {
+        throw Exception('Could not extract user ID from token');
+      }
+      
+      print('👤 User ID: $userId');
+      print('📦 Order ID: ${widget.orderId}');
+      
+      // Call cancel order API
+      final result = await _orderService.cancelOrder(
+        orderId: widget.orderId,
+        cancelledBy: userId,
+        reason: "Cancelled by client",
+      );
+      
+      print('✅ Cancel order API response: $result');
+
+      if (mounted) {
+        // Clear active order state
+        await _orderStateService.clearActiveOrder();
+        print('🧹 Cleared active order state');
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate back to home
+        print('🏠 Navigating to home...');
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context, 
+            '/client-home', 
+            (route) => false
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error cancelling order: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -97,21 +228,20 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Waiting for Provider'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        actions: [
-          TextButton(
-            onPressed: _cancelOrder,
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+    return PopScope(
+      canPop: false, // Prevent back button navigation
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        // Show dialog when user tries to go back
+        _showExitDialog();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Waiting for Provider'),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          automaticallyImplyLeading: false, // Remove back button
+        ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _order == null
@@ -187,9 +317,28 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+
+                      // Cancel button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _cancelOrder,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text(
+                            'Cancel Order',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
+      ),
     );
   }
 

@@ -3,6 +3,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import '../../data/services/order_service.dart';
 import '../../data/services/location_service.dart';
+import '../../data/services/order_state_service.dart';
+import '../../core/utils/storage_helper.dart';
+import '../../core/utils/jwt_utils.dart';
 import 'arrived_page.dart';
 
 class ProviderOnTheWayPage extends StatefulWidget {
@@ -17,6 +20,7 @@ class ProviderOnTheWayPage extends StatefulWidget {
 class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   final OrderService _orderService = OrderService();
   final LocationService _locationService = LocationService();
+  final OrderStateService _orderStateService = OrderStateService();
   Timer? _timer;
   Map<String, dynamic>? _order;
   Map<String, dynamic>? _location;
@@ -39,9 +43,21 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
         _isLoading = false;
       });
 
+      // Save active order state
+      await _orderStateService.saveActiveOrder(
+        orderId: widget.orderId,
+        status: order['status'],
+        userRole: 'client',
+      );
+
       // Check if provider has arrived
       if (order['status'] == 'ARRIVED') {
         _navigateToArrivedPage();
+      }
+      
+      // Check if order is cancelled
+      if (order['status'] == 'CANCELLED') {
+        _handleOrderCancelled(order);
       }
     } catch (e) {
       setState(() {
@@ -115,6 +131,133 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
     }
   }
 
+  void _handleOrderCancelled(Map<String, dynamic> order) async {
+    if (mounted) {
+      // Clear active order state
+      await _orderStateService.clearActiveOrder();
+      
+      // Show cancellation popup
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Order Cancelled'),
+          content: Text(
+            order['cancellation_reason'] ?? 'This order has been cancelled.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.popUntil(context, (route) => route.isFirst); // Go to home
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showExitDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit Order'),
+        content: const Text('You cannot exit while the provider is on the way. You can only cancel the order.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _cancelOrder();
+            },
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _cancelOrder() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: const Text('Are you sure you want to cancel this order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _performCancelOrder();
+            },
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performCancelOrder() async {
+    try {
+      // Get current user ID from JWT token
+      final token = await StorageHelper.getAccessToken();
+      if (token == null) {
+        throw Exception('No access token found');
+      }
+      
+      final userId = JwtUtils.getUserIdFromToken(token);
+      if (userId == null) {
+        throw Exception('Could not extract user ID from token');
+      }
+      
+      await _orderService.cancelOrder(
+        orderId: widget.orderId,
+        cancelledBy: userId,
+        reason: "Cancelled by client",
+      );
+
+      if (mounted) {
+        // Clear active order state
+        await _orderStateService.clearActiveOrder();
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate back to home
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context, 
+            '/client-home', 
+            (route) => false
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -124,12 +267,20 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Provider On The Way'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
+    return PopScope(
+      canPop: false, // Prevent back button navigation
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        // Show dialog when user tries to go back
+        _showExitDialog();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Provider On The Way'),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          automaticallyImplyLeading: false, // Remove back button
+        ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _order == null
@@ -228,11 +379,30 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+
+                          // Cancel button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _cancelOrder,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              child: const Text(
+                                'Cancel Order',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
+      ),
     );
   }
 

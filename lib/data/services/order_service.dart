@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../../core/constants/api_endpoints.dart';
 import 'api_client.dart';
 
@@ -173,6 +171,31 @@ class OrderService {
       }
     } catch (e) {
       throw Exception('Error getting pending orders: $e');
+    }
+  }
+
+  // Cancel order
+  Future<Map<String, dynamic>> cancelOrder({
+    required String orderId,
+    required String cancelledBy,
+    required String reason,
+  }) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        '${ApiEndpoints.getOrder}/$orderId/cancel',
+        data: {
+          'cancelled_by': cancelledBy,
+          'reason': reason,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? response.data;
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to cancel order');
+      }
+    } catch (e) {
+      throw Exception('Error cancelling order: $e');
     }
   }
 }
