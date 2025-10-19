@@ -25,6 +25,7 @@ class _NavigationPageState extends State<NavigationPage> {
   final AuthService _authService = AuthService();
   final OrderStateService _orderStateService = OrderStateService();
   Timer? _locationTimer;
+  Timer? _orderStatusTimer;
   GoogleMapController? _mapController;
   Map<String, dynamic>? _order;
   Position? _currentPosition;
@@ -36,6 +37,7 @@ class _NavigationPageState extends State<NavigationPage> {
     _loadOrder();
     _getCurrentLocation();
     _startLocationTracking();
+    _startOrderStatusPolling();
   }
 
   Future<void> _loadOrder() async {
@@ -97,6 +99,12 @@ class _NavigationPageState extends State<NavigationPage> {
     });
   }
 
+  void _startOrderStatusPolling() {
+    _orderStatusTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _loadOrder();
+    });
+  }
+
   Future<void> _updateLocation() async {
     try {
       final user = await _authService.getUserProfile();
@@ -152,6 +160,10 @@ class _NavigationPageState extends State<NavigationPage> {
 
   void _handleOrderCancelled(Map<String, dynamic> order) async {
     if (mounted) {
+      // Cancel polling timers
+      _locationTimer?.cancel();
+      _orderStatusTimer?.cancel();
+      
       // Clear active order state
       await _orderStateService.clearActiveOrder();
       
@@ -168,7 +180,11 @@ class _NavigationPageState extends State<NavigationPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.popUntil(context, (route) => route.isFirst); // Go to home
+                Navigator.pushNamedAndRemoveUntil(
+                  context, 
+                  '/service-home', 
+                  (route) => false
+                );
               },
               child: const Text('OK'),
             ),
@@ -245,6 +261,10 @@ class _NavigationPageState extends State<NavigationPage> {
       );
 
       if (mounted) {
+        // Cancel polling timers
+        _locationTimer?.cancel();
+        _orderStatusTimer?.cancel();
+        
         // Clear active order state
         await _orderStateService.clearActiveOrder();
         
@@ -280,6 +300,7 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void dispose() {
     _locationTimer?.cancel();
+    _orderStatusTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
   }

@@ -114,7 +114,7 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
 
   void _startLocationPolling() {
     _loadLocation();
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadOrder();
       _loadLocation();
     });
@@ -133,6 +133,9 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
 
   void _handleOrderCancelled(Map<String, dynamic> order) async {
     if (mounted) {
+      // Cancel polling timer
+      _timer?.cancel();
+      
       // Clear active order state
       await _orderStateService.clearActiveOrder();
       
@@ -149,7 +152,11 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.popUntil(context, (route) => route.isFirst); // Go to home
+                Navigator.pushNamedAndRemoveUntil(
+                  context, 
+                  '/client-home', 
+                  (route) => false
+                );
               },
               child: const Text('OK'),
             ),
@@ -226,6 +233,9 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
       );
 
       if (mounted) {
+        // Cancel polling timer
+        _timer?.cancel();
+        
         // Clear active order state
         await _orderStateService.clearActiveOrder();
         

@@ -66,7 +66,7 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
   }
 
   void _startPolling() {
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadOrder();
     });
   }
@@ -84,6 +84,9 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
 
   void _handleOrderCancelled(Map<String, dynamic> order) async {
     if (mounted) {
+      // Cancel polling timer
+      _timer?.cancel();
+      
       // Clear active order state
       await _orderStateService.clearActiveOrder();
       
@@ -100,7 +103,11 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.popUntil(context, (route) => route.isFirst); // Go to home
+                Navigator.pushNamedAndRemoveUntil(
+                  context, 
+                  '/client-home', 
+                  (route) => false
+                );
               },
               child: const Text('OK'),
             ),
@@ -185,6 +192,9 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
       print('✅ Cancel order API response: $result');
 
       if (mounted) {
+        // Cancel polling timer
+        _timer?.cancel();
+        
         // Clear active order state
         await _orderStateService.clearActiveOrder();
         print('🧹 Cleared active order state');
