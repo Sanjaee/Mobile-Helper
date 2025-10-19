@@ -54,9 +54,12 @@ dependencies:
   google_sign_in: ^6.2.1
   
   # Google Maps
-  google_maps_flutter: ^2.6.1
+  google_maps_flutter: ^2.7.0
   geolocator: ^9.0.2
   geocoding: ^2.1.1
+  
+  # Google Directions API
+  flutter_polyline_points: ^2.0.0
 
 dev_dependencies:
   flutter_test:

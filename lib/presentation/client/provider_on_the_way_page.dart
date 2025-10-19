@@ -5,9 +5,9 @@ import 'dart:async';
 import '../../data/services/order_service.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/order_state_service.dart';
+import '../../data/services/google_directions_service.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/utils/jwt_utils.dart';
-import 'arrived_page.dart';
 
 class ProviderOnTheWayPage extends StatefulWidget {
   final String orderId;
@@ -22,14 +22,15 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   final OrderService _orderService = OrderService();
   final LocationService _locationService = LocationService();
   final OrderStateService _orderStateService = OrderStateService();
+  final GoogleDirectionsService _directionsService = GoogleDirectionsService();
   Timer? _timer;
   Map<String, dynamic>? _order;
-  Map<String, dynamic>? _location;
   Map<String, dynamic>? _providerLocation;
   bool _isLoading = true;
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
+  int _etaMinutes = 0;
 
   @override
   void initState() {
@@ -74,17 +75,6 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
     }
   }
 
-  Future<void> _loadLocation() async {
-    try {
-      final location = await _locationService.getOrderLocation(widget.orderId);
-      setState(() {
-        _location = location;
-        _updateMarkers();
-      });
-    } catch (e) {
-      // Location might not be available yet
-    }
-  }
 
   void _updateMarkers() {
     if (_order != null) {
@@ -104,7 +94,7 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
         
         _polylines = {};
         
-        // Add provider location and polyline if available
+        // Add provider location if available
         if (_providerLocation != null) {
           _markers.add(
             Marker(
@@ -117,9 +107,65 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
               icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
             ),
           );
+        }
+      });
+      
+      // Load directions if we have provider location
+      if (_providerLocation != null) {
+        _loadDirections();
+      }
+    }
+  }
+
+  Future<void> _loadDirections() async {
+    if (_order != null && _providerLocation != null) {
+      try {
+        // Get polyline points that follow actual roads
+        final points = await _directionsService.getPolylinePoints(
+          _providerLocation!['latitude'],
+          _providerLocation!['longitude'],
+          _order!['service_latitude'],
+          _order!['service_longitude'],
+        );
+        
+        // Convert PointLatLng to LatLng
+        final polylineCoordinates = points.map((p) => LatLng(p.latitude, p.longitude)).toList();
+        
+        setState(() {
+          _polylines = {
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: polylineCoordinates,
+              color: const Color(0xFF00BFA5), // Gojek-like green color
+              width: 6,
+              patterns: [PatternItem.dash(30), PatternItem.gap(15)],
+              jointType: JointType.round,
+              endCap: Cap.roundCap,
+              startCap: Cap.roundCap,
+            ),
+          };
+        });
+        
+        // Get additional info for ETA
+        try {
+          final result = await _directionsService.getPolylinePointsWithInfo(
+            _providerLocation!['latitude'],
+            _providerLocation!['longitude'],
+            _order!['service_latitude'],
+            _order!['service_longitude'],
+          );
           
-          // Add polyline from provider to client
-          _polylines.add(
+          setState(() {
+            _etaMinutes = result.durationInSeconds ~/ 60;
+          });
+        } catch (e) {
+          print('Error getting route info: $e');
+        }
+      } catch (e) {
+        print('Error loading directions: $e');
+        // Fallback to straight line
+        setState(() {
+          _polylines = {
             Polyline(
               polylineId: const PolylineId('route'),
               points: [
@@ -132,22 +178,23 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                   _order!['service_longitude'],
                 ),
               ],
-              color: Colors.blue,
-              width: 4,
-              patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+              color: const Color(0xFF00BFA5), // Gojek-like green color
+              width: 6,
+              patterns: [PatternItem.dash(30), PatternItem.gap(15)],
+              jointType: JointType.round,
+              endCap: Cap.roundCap,
+              startCap: Cap.roundCap,
             ),
-          );
-        }
-      });
+          };
+        });
+      }
     }
   }
 
   void _startLocationPolling() {
-    _loadLocation();
     _loadProviderLocation();
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadOrder();
-      _loadLocation();
       _loadProviderLocation();
     });
   }
@@ -403,20 +450,35 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                                 ),
                               ),
                               // ETA info
-                              if (_location != null)
+                              if (_etaMinutes > 0)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${_location!['estimated_arrival_minutes'] ?? 'N/A'} min',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.blue,
+                                    color: const Color(0xFF00BFA5).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFF00BFA5).withOpacity(0.3),
+                                      width: 1,
                                     ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '$_etaMinutes',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF00BFA5),
+                                        ),
+                                      ),
+                                      const Text(
+                                        'menit',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF00BFA5),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                             ],

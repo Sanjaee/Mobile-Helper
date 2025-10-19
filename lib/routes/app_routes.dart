@@ -18,6 +18,7 @@ import '../presentation/service/navigation_page.dart';
 import '../presentation/service/arrived_page.dart';
 import '../presentation/client/arrived_page.dart';
 import '../presentation/client/create_order_page.dart';
+import '../presentation/test/test_polyline_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const String serviceArrived = '/service-arrived';
   static const String clientArrived = '/client-arrived';
   static const String createOrder = '/create-order';
+  static const String testPolyline = '/test-polyline';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -172,6 +174,11 @@ class AppRoutes {
         path: createOrder,
         name: 'create-order',
         builder: (context, state) => const CreateOrderPage(),
+      ),
+      GoRoute(
+        path: testPolyline,
+        name: 'test-polyline',
+        builder: (context, state) => const TestPolylinePage(),
       ),
     ],
     errorBuilder:
