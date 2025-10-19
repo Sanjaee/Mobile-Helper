@@ -24,6 +24,7 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   Timer? _timer;
   Map<String, dynamic>? _order;
   Map<String, dynamic>? _location;
+  Map<String, dynamic>? _providerLocation;
   bool _isLoading = true;
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
@@ -84,7 +85,7 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
   }
 
   void _updateMarkers() {
-    if (_order != null && _location != null) {
+    if (_order != null) {
       setState(() {
         _markers = {
           // Client location
@@ -97,27 +98,47 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
             infoWindow: const InfoWindow(title: 'Your Location'),
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           ),
-          // Provider location
-          Marker(
-            markerId: const MarkerId('provider_location'),
-            position: LatLng(
-              _location!['latitude'],
-              _location!['longitude'],
-            ),
-            infoWindow: const InfoWindow(title: 'Provider Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          ),
         };
+        
+        // Add provider location if available
+        if (_providerLocation != null) {
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('provider_location'),
+              position: LatLng(
+                _providerLocation!['latitude'],
+                _providerLocation!['longitude'],
+              ),
+              infoWindow: const InfoWindow(title: 'Provider Location'),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            ),
+          );
+        }
       });
     }
   }
 
   void _startLocationPolling() {
     _loadLocation();
+    _loadProviderLocation();
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadOrder();
       _loadLocation();
+      _loadProviderLocation();
     });
+  }
+
+  Future<void> _loadProviderLocation() async {
+    try {
+      final location = await _locationService.getProviderLocation(widget.orderId);
+      setState(() {
+        _providerLocation = location;
+      });
+      _updateMarkers();
+    } catch (e) {
+      // Provider location might not be available yet
+      print('Provider location not available: $e');
+    }
   }
 
   void _navigateToArrivedPage() {

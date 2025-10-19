@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../data/services/order_service.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/location_service.dart';
 import 'navigation_page.dart';
 
 class OrderRequestPage extends StatefulWidget {
@@ -16,6 +18,7 @@ class OrderRequestPage extends StatefulWidget {
 class _OrderRequestPageState extends State<OrderRequestPage> {
   final OrderService _orderService = OrderService();
   final AuthService _authService = AuthService();
+  final LocationService _locationService = LocationService();
   bool _isLoading = false;
 
   Future<void> _acceptOrder() async {
@@ -26,10 +29,31 @@ class _OrderRequestPageState extends State<OrderRequestPage> {
     try {
       final user = await _authService.getUserProfile();
 
+      // Accept the order
       await _orderService.acceptOrder(
         orderId: widget.order['id'],
         providerId: user.id,
       );
+
+      // Get current location and send to backend
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+
+        await _locationService.updateLocation(
+          orderId: widget.order['id'],
+          serviceProviderId: user.id,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          speedKmh: position.speed,
+          accuracyMeters: position.accuracy.round(),
+          headingDegrees: position.heading.round(),
+        );
+      } catch (e) {
+        print('Error updating location: $e');
+        // Continue even if location update fails
+      }
 
       if (mounted) {
         Navigator.pushReplacement(

@@ -297,6 +297,42 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
+  Set<Marker> _buildMarkers() {
+    Set<Marker> markers = {};
+    
+    if (_order != null) {
+      // Client location
+      markers.add(
+        Marker(
+          markerId: const MarkerId('client_location'),
+          position: LatLng(
+            _order!['service_latitude'],
+            _order!['service_longitude'],
+          ),
+          infoWindow: const InfoWindow(title: 'Client Location'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        ),
+      );
+      
+      // Provider location (current position)
+      if (_currentPosition != null) {
+        markers.add(
+          Marker(
+            markerId: const MarkerId('provider_location'),
+            position: LatLng(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+            ),
+            infoWindow: const InfoWindow(title: 'Your Location'),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          ),
+        );
+      }
+    }
+    
+    return markers;
+  }
+
   @override
   void dispose() {
     _locationTimer?.cancel();
@@ -341,29 +377,7 @@ class _NavigationPageState extends State<NavigationPage> {
                         onMapCreated: (GoogleMapController controller) {
                           _mapController = controller;
                         },
-                        markers: {
-                          // Client location
-                          Marker(
-                            markerId: const MarkerId('client_location'),
-                            position: LatLng(
-                              _order!['service_latitude'],
-                              _order!['service_longitude'],
-                            ),
-                            infoWindow: const InfoWindow(title: 'Client Location'),
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-                          ),
-                          // Provider location
-                          if (_currentPosition != null)
-                            Marker(
-                              markerId: const MarkerId('provider_location'),
-                              position: LatLng(
-                                _currentPosition!.latitude,
-                                _currentPosition!.longitude,
-                              ),
-                              infoWindow: const InfoWindow(title: 'Your Location'),
-                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                            ),
-                        },
+                        markers: _buildMarkers(),
                       ),
                     ),
 

@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../../core/constants/api_endpoints.dart';
 import 'api_client.dart';
 
@@ -76,6 +74,23 @@ class LocationService {
       }
     } catch (e) {
       throw Exception('Error getting location history: $e');
+    }
+  }
+
+  // Get provider location
+  Future<Map<String, dynamic>> getProviderLocation(String orderId) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '${ApiEndpoints.getProviderLocation}/$orderId',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? response.data;
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to get provider location');
+      }
+    } catch (e) {
+      throw Exception('Error getting provider location: $e');
     }
   }
 }

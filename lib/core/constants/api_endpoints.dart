@@ -34,6 +34,7 @@ class ApiEndpoints {
   static const String updateLocation = '$baseUrl/api/v1/locations/track';
   static const String getOrderLocation = '$baseUrl/api/v1/locations/order';
   static const String getLocationHistory = '$baseUrl/api/v1/locations/order';
+  static const String getProviderLocation = '$baseUrl/api/v1/locations/provider';
 
   // Health check
   static const String health = '/health';
