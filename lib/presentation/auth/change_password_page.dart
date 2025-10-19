@@ -84,19 +84,30 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false, // Prevent back navigation
+      onPopInvoked: (didPop) {
+        // Show message when user tries to go back
+        if (!didPop) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please complete password setup to continue'),
+              backgroundColor: AppColors.warning,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => NavigationHelper.goBack(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          automaticallyImplyLeading: false, // Remove back button
+          title: Text('New Password', style: AppTextStyles.h3),
+          centerTitle: true,
         ),
-        title: Text('New Password', style: AppTextStyles.h3),
-        centerTitle: true,
-      ),
-      body: SafeArea(
+        body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -210,6 +221,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           ),
         ),
       ),
+    ),
     );
   }
 }

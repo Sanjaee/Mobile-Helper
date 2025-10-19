@@ -1,7 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_text_styles.dart';
+
+// Custom formatter that allows paste but limits manual input to 1 character
+class _OTPTextInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Allow paste (when new value has multiple characters)
+    if (newValue.text.length > 1) {
+      return newValue;
+    }
+    
+    // For manual input, limit to 1 character
+    if (newValue.text.length <= 1) {
+      return newValue;
+    }
+    
+    return oldValue;
+  }
+}
 
 class OTPInputField extends StatefulWidget {
   final int length;
@@ -63,8 +83,8 @@ class OTPInputFieldState extends State<OTPInputField> {
 
   void _onChanged(int index, String value) {
     if (value.length > 1) {
-      // Handle paste
-      _handlePaste(value);
+      // Handle paste - fill from beginning regardless of which field was pasted into
+      _handlePaste(value, index);
       return;
     }
 
@@ -100,20 +120,22 @@ class OTPInputFieldState extends State<OTPInputField> {
     }
   }
 
-  void _handlePaste(String pastedText) {
+  void _handlePaste(String pastedText, int pastedIndex) {
     final cleanText = pastedText.replaceAll(RegExp(r'[^0-9]'), '');
     final digits = cleanText.split('').toList();
 
-    // Fill all fields with pasted digits
-    for (int i = 0; i < widget.length; i++) {
-      if (i < digits.length) {
-        _controllers[i].text = digits[i];
-        _otp[i] = digits[i];
-      } else {
-        _controllers[i].text = '';
-        _otp[i] = '';
+    setState(() {
+      // Fill all fields with pasted digits starting from first field
+      for (int i = 0; i < widget.length; i++) {
+        if (i < digits.length) {
+          _controllers[i].text = digits[i];
+          _otp[i] = digits[i];
+        } else {
+          _controllers[i].text = '';
+          _otp[i] = '';
+        }
       }
-    }
+    });
 
     widget.onChanged?.call(_otp.join());
 
@@ -129,20 +151,6 @@ class OTPInputFieldState extends State<OTPInputField> {
     }
   }
 
-  void _onBackspace(int index) {
-    if (_controllers[index].text.isEmpty && index > 0) {
-      // If current field is empty, move to previous field and clear it
-      _controllers[index - 1].clear();
-      _otp[index - 1] = '';
-      _focusNodes[index - 1].requestFocus();
-      widget.onChanged?.call(_otp.join());
-    } else if (_controllers[index].text.isNotEmpty) {
-      // If current field has text, clear it
-      _controllers[index].clear();
-      _otp[index] = '';
-      widget.onChanged?.call(_otp.join());
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +164,7 @@ class OTPInputFieldState extends State<OTPInputField> {
     final isFocused = _focusNodes[index].hasFocus;
     final hasValue = _otp[index].isNotEmpty;
 
-    return Container(
+    return SizedBox(
       width: 40,
       height: 48,
       child: TextFormField(
@@ -166,7 +174,7 @@ class OTPInputFieldState extends State<OTPInputField> {
         keyboardType: TextInputType.number,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
+          _OTPTextInputFormatter(),
         ],
         enabled: widget.enabled,
         autofocus: widget.autoFocus && index == 0,
