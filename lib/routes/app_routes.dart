@@ -7,6 +7,7 @@ import '../presentation/auth/verify_otp_page.dart';
 import '../presentation/auth/reset_password_page.dart';
 import '../presentation/auth/change_password_page.dart';
 import '../presentation/auth/update_password_page.dart';
+import '../presentation/auth/complete_profile_page.dart';
 import '../presentation/home/home_page.dart';
 import '../presentation/client/client_home_page.dart';
 import '../presentation/service/service_home_page.dart';
@@ -28,6 +29,7 @@ class AppRoutes {
   static const String resetPassword = '/reset-password';
   static const String changePassword = '/change-password';
   static const String updatePassword = '/update-password';
+  static const String completeProfile = '/complete-profile';
   static const String home = '/home';
   static const String clientHome = '/client-home';
   static const String serviceHome = '/service-home';
@@ -96,6 +98,12 @@ class AppRoutes {
         path: updatePassword,
         name: 'update-password',
         builder: (context, state) => const UpdatePasswordPage(),
+      ),
+
+      GoRoute(
+        path: completeProfile,
+        name: 'complete-profile',
+        builder: (context, state) => const CompleteProfilePage(),
       ),
 
       // Home route

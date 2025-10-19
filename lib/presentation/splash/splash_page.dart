@@ -4,6 +4,7 @@ import '../../core/constants/app_text_styles.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../data/services/order_state_service.dart';
+import '../../data/services/auth_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -24,6 +25,24 @@ class _SplashPageState extends State<SplashPage> {
     final loggedIn = await StorageHelper.isLoggedIn();
     if (!mounted) return;
     if (!loggedIn) {
+      context.go('/login');
+      return;
+    }
+
+    // Check if profile is complete
+    try {
+      final authService = AuthService();
+      final user = await authService.getUserProfile();
+      
+      // If gender is not set, redirect to complete profile
+      if (user.gender == null || user.gender!.isEmpty) {
+        if (!mounted) return;
+        context.go('/complete-profile');
+        return;
+      }
+    } catch (e) {
+      // If error fetching profile, proceed to login
+      if (!mounted) return;
       context.go('/login');
       return;
     }

@@ -99,16 +99,29 @@ class _LoginPageState extends State<LoginPage> {
       final res = await authService.signInWithGoogle();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Google Sign In successful!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        final type = res.user.userType.toUpperCase();
-        final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
-        final target = isService ? '/service-home' : '/client-home';
-        NavigationHelper.goToAndClearStack(context, target);
+        // Check if profile is complete (has gender)
+        // If gender is null or empty, redirect to complete profile
+        if (res.user.gender == null || res.user.gender!.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please complete your profile'),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+          NavigationHelper.goToAndClearStack(context, '/complete-profile');
+        } else {
+          // Profile is complete, proceed to home
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google Sign In successful!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          final type = res.user.userType.toUpperCase();
+          final isService = type == 'SERVICE' || type == 'SERVICE_PROVIDER' || type == 'PROVIDER';
+          final target = isService ? '/service-home' : '/client-home';
+          NavigationHelper.goToAndClearStack(context, target);
+        }
       }
     } catch (e) {
       if (mounted) {
