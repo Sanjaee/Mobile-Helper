@@ -15,6 +15,9 @@ import '../presentation/service/service_map_full_page.dart';
 import '../presentation/client/waiting_provider_page.dart';
 import '../presentation/client/provider_on_the_way_page.dart';
 import '../presentation/service/navigation_page.dart';
+import '../presentation/service/arrived_page.dart';
+import '../presentation/client/arrived_page.dart';
+import '../presentation/client/create_order_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -32,6 +35,9 @@ class AppRoutes {
   static const String waitingProvider = '/waiting-provider';
   static const String providerOnTheWay = '/provider-on-the-way';
   static const String navigation = '/navigation';
+  static const String serviceArrived = '/service-arrived';
+  static const String clientArrived = '/client-arrived';
+  static const String createOrder = '/create-order';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -145,6 +151,27 @@ class AppRoutes {
           final orderId = state.uri.queryParameters['orderId'] ?? '';
           return NavigationPage(orderId: orderId);
         },
+      ),
+      GoRoute(
+        path: serviceArrived,
+        name: 'service-arrived',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          return ServiceArrivedPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: clientArrived,
+        name: 'client-arrived',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          return ArrivedPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: createOrder,
+        name: 'create-order',
+        builder: (context, state) => const CreateOrderPage(),
       ),
     ],
     errorBuilder:

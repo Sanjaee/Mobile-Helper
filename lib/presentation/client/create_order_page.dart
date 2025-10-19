@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/widgets/dynamic_map.dart';
 import '../../data/services/order_service.dart';
 import '../../data/services/auth_service.dart';
-import 'waiting_provider_page.dart';
 
 class CreateOrderPage extends StatefulWidget {
   const CreateOrderPage({Key? key}) : super(key: key);
@@ -138,12 +138,7 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
       print('Order created successfully: $order');
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WaitingProviderPage(orderId: order['id']),
-          ),
-        );
+        context.go('/waiting-provider?orderId=${order['id']}');
       }
     } catch (e) {
       print('Error creating order: $e');

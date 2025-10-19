@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../data/services/order_service.dart';
 import '../../data/services/order_state_service.dart';
@@ -73,12 +74,7 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
 
   void _navigateToProviderOnTheWay() {
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProviderOnTheWayPage(orderId: widget.orderId),
-        ),
-      );
+      context.go('/provider-on-the-way?orderId=${widget.orderId}');
     }
   }
 
@@ -103,11 +99,7 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.pushNamedAndRemoveUntil(
-                  context, 
-                  '/client-home', 
-                  (route) => false
-                );
+                context.go('/client-home');
               },
               child: const Text('OK'),
             ),
@@ -210,11 +202,7 @@ class _WaitingProviderPageState extends State<WaitingProviderPage> {
         // Navigate back to home
         print('🏠 Navigating to home...');
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/client-home', 
-            (route) => false
-          );
+          context.go('/client-home');
         }
       }
     } catch (e) {

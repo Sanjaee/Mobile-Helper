@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../data/services/order_service.dart';
 import '../../data/services/location_service.dart';
@@ -150,12 +151,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
   void _navigateToArrivedPage() {
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ServiceArrivedPage(orderId: widget.orderId),
-        ),
-      );
+      context.go('/service-arrived?orderId=${widget.orderId}');
     }
   }
 
@@ -181,11 +177,7 @@ class _NavigationPageState extends State<NavigationPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.pushNamedAndRemoveUntil(
-                  context, 
-                  '/service-home', 
-                  (route) => false
-                );
+                context.go('/service-home');
               },
               child: const Text('OK'),
             ),
@@ -279,11 +271,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
         // Navigate back to home
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/service-home', 
-            (route) => false
-          );
+          context.go('/service-home');
         }
       }
     } catch (e) {

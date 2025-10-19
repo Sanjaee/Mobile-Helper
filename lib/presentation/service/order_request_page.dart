@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/services/order_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/location_service.dart';
-import 'navigation_page.dart';
 
 class OrderRequestPage extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -56,12 +56,7 @@ class _OrderRequestPageState extends State<OrderRequestPage> {
       }
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => NavigationPage(orderId: widget.order['id']),
-          ),
-        );
+        context.go('/navigation?orderId=${widget.order['id']}');
       }
     } catch (e) {
       if (mounted) {

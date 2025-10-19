@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/navigation.dart';
 import '../../data/services/auth_service.dart';
-import 'create_order_page.dart';
 
 class ClientHomePage extends StatelessWidget {
   const ClientHomePage({super.key});
@@ -44,10 +44,7 @@ class ClientHomePage extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.add_circle,
                   label: 'Order',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CreateOrderPage()),
-                  ),
+                  onTap: () => context.go('/create-order'),
                 ),
                 _MenuItem(
                   icon: Icons.map,
