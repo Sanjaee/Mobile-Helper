@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/services/order_service.dart';
 
 class ArrivedPage extends StatefulWidget {
@@ -28,6 +29,14 @@ class _ArrivedPageState extends State<ArrivedPage> {
         _order = order;
         _isLoading = false;
       });
+      
+      // If already arrived, navigate to job detail page immediately
+      if (mounted && order['status'] == 'ARRIVED') {
+        context.go('/client-job-detail?orderId=${widget.orderId}');
+      } else if (mounted && order['status'] == 'IN_PROGRESS') {
+        // If job already in progress, also navigate to job detail
+        context.go('/client-job-detail?orderId=${widget.orderId}');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;

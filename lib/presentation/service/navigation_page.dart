@@ -202,6 +202,39 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
+  Future<void> _markArrived() async {
+    try {
+      final user = await _authService.getUserProfile();
+
+      // First, check if we need to start the journey (if status is ACCEPTED)
+      if (_order != null && _order!['status'] == 'ACCEPTED') {
+        await _orderService.updateOrderOnTheWay(
+          orderId: widget.orderId,
+          providerId: user.id,
+        );
+        // Wait a bit for the status to update
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      // Now mark as arrived
+      await _orderService.updateOrderArrived(
+        orderId: widget.orderId,
+        providerId: user.id,
+      );
+
+      if (mounted) {
+        // Navigate to job detail page
+        _navigateToArrivedPage();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error marking arrived: $e')),
+        );
+      }
+    }
+  }
+
   void _navigateToArrivedPage() {
     if (mounted) {
       context.go('/service-arrived?orderId=${widget.orderId}');
@@ -689,9 +722,9 @@ class _NavigationPageState extends State<NavigationPage> {
                             children: [
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: _startJourney,
+                                  onPressed: _markArrived,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
+                                    backgroundColor: const Color(0xFF00BFA5),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     shape: RoundedRectangleBorder(
@@ -699,9 +732,16 @@ class _NavigationPageState extends State<NavigationPage> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  child: const Text(
-                                    'Start Journey',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _order!['status'] == 'ACCEPTED' 
+                                            ? 'Mulai Perjalanan'
+                                            : 'Sampai di Tempat',
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),

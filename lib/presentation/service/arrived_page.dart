@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/services/order_service.dart';
 import '../../data/services/auth_service.dart';
 
@@ -30,6 +31,11 @@ class _ServiceArrivedPageState extends State<ServiceArrivedPage> {
         _order = order;
         _isLoading = false;
       });
+      
+      // If already arrived, navigate to job detail page immediately
+      if (mounted && order['status'] == 'ARRIVED') {
+        context.go('/provider-job-detail?orderId=${widget.orderId}');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;

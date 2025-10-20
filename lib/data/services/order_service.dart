@@ -174,6 +174,46 @@ class OrderService {
     }
   }
 
+  // Start job
+  Future<Map<String, dynamic>> startJob({
+    required String orderId,
+    required String providerId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        '${ApiEndpoints.getOrder}/$orderId/start-job?provider_id=$providerId',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? response.data;
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to start job');
+      }
+    } catch (e) {
+      throw Exception('Error starting job: $e');
+    }
+  }
+
+  // Complete job
+  Future<Map<String, dynamic>> completeJob({
+    required String orderId,
+    required String providerId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        '${ApiEndpoints.getOrder}/$orderId/complete-job?provider_id=$providerId',
+      );
+
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? response.data;
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to complete job');
+      }
+    } catch (e) {
+      throw Exception('Error completing job: $e');
+    }
+  }
+
   // Cancel order
   Future<Map<String, dynamic>> cancelOrder({
     required String orderId,

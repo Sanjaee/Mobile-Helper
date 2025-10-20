@@ -20,6 +20,10 @@ import '../presentation/service/arrived_page.dart';
 import '../presentation/client/arrived_page.dart';
 import '../presentation/client/create_order_page.dart';
 import '../presentation/test/test_polyline_page.dart';
+import '../presentation/service/provider_job_detail_page.dart';
+import '../presentation/client/client_job_detail_page.dart';
+import '../presentation/service/provider_job_completed_page.dart';
+import '../presentation/client/client_job_completed_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -40,6 +44,10 @@ class AppRoutes {
   static const String navigation = '/navigation';
   static const String serviceArrived = '/service-arrived';
   static const String clientArrived = '/client-arrived';
+  static const String providerJobDetail = '/provider-job-detail';
+  static const String clientJobDetail = '/client-job-detail';
+  static const String providerJobCompleted = '/provider-job-completed';
+  static const String clientJobCompleted = '/client-job-completed';
   static const String createOrder = '/create-order';
   static const String testPolyline = '/test-polyline';
 
@@ -178,6 +186,41 @@ class AppRoutes {
           return ArrivedPage(orderId: orderId);
         },
       ),
+      
+      // Job detail and completion pages
+      GoRoute(
+        path: providerJobDetail,
+        name: 'provider-job-detail',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          return ProviderJobDetailPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: clientJobDetail,
+        name: 'client-job-detail',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          return ClientJobDetailPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: providerJobCompleted,
+        name: 'provider-job-completed',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          return ProviderJobCompletedPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: clientJobCompleted,
+        name: 'client-job-completed',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          return ClientJobCompletedPage(orderId: orderId);
+        },
+      ),
+      
       GoRoute(
         path: createOrder,
         name: 'create-order',
