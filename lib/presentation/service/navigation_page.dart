@@ -179,44 +179,11 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-  Future<void> _startJourney() async {
-    try {
-      final user = await _authService.getUserProfile();
-
-      await _orderService.updateOrderOnTheWay(
-        orderId: widget.orderId,
-        providerId: user.id,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Journey started!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error starting journey: $e')),
-        );
-      }
-    }
-  }
-
   Future<void> _markArrived() async {
     try {
       final user = await _authService.getUserProfile();
 
-      // First, check if we need to start the journey (if status is ACCEPTED)
-      if (_order != null && _order!['status'] == 'ACCEPTED') {
-        await _orderService.updateOrderOnTheWay(
-          orderId: widget.orderId,
-          providerId: user.id,
-        );
-        // Wait a bit for the status to update
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-
-      // Now mark as arrived
+      // Directly mark as arrived
       await _orderService.updateOrderArrived(
         orderId: widget.orderId,
         providerId: user.id,
@@ -732,14 +699,12 @@ class _NavigationPageState extends State<NavigationPage> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        _order!['status'] == 'ACCEPTED' 
-                                            ? 'Mulai Perjalanan'
-                                            : 'Sampai di Tempat',
-                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                        'Sampai di Tempat',
+                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                                       ),
                                     ],
                                   ),
