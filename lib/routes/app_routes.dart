@@ -9,8 +9,8 @@ import '../presentation/auth/change_password_page.dart';
 import '../presentation/auth/update_password_page.dart';
 import '../presentation/auth/complete_profile_page.dart';
 import '../presentation/home/home_page.dart';
-import '../presentation/client/client_home_page.dart';
-import '../presentation/service/service_home_page.dart';
+import '../presentation/client/client_main_page.dart';
+import '../presentation/service/service_main_page.dart';
 import '../presentation/client/client_map_full_page.dart';
 import '../presentation/service/service_map_full_page.dart';
 import '../presentation/client/waiting_provider_page.dart';
@@ -129,12 +129,12 @@ class AppRoutes {
       GoRoute(
         path: clientHome,
         name: 'client-home',
-        builder: (context, state) => const ClientHomePage(),
+        builder: (context, state) => const ClientMainPage(),
       ),
       GoRoute(
         path: serviceHome,
         name: 'service-home',
-        builder: (context, state) => const ServiceHomePage(),
+        builder: (context, state) => const ServiceMainPage(),
       ),
 
       // Full screen maps
