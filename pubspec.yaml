@@ -66,6 +66,9 @@ dependencies:
   
   # Page indicator for carousel
   smooth_page_indicator: ^1.1.0
+  
+  # Date formatting
+  intl: ^0.18.0
 
 dev_dependencies:
   flutter_test:
