@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/utils/navigation.dart';
+import '../../core/utils/storage_helper.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/user_model.dart';
 import '../../core/widgets/profile_avatar.dart';
@@ -39,6 +40,95 @@ class _ServiceProfilePageState extends State<ServiceProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading profile: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _switchToClient() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Switch to Client',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to switch to Client mode? Your account type will be changed and you will be redirected to the client dashboard.',
+          style: TextStyle(color: Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.black54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            child: const Text('Switch'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // 1. Update user type to CLIENT
+        await _authService.updateProfile({'user_type': 'CLIENT'});
+
+        // 2. Get refresh token from storage
+        final refreshToken = await StorageHelper.getRefreshToken();
+        if (refreshToken == null) {
+          throw Exception('No refresh token found');
+        }
+
+        // 3. Refresh JWT token to get new token with updated user type
+        await _authService.refreshAccessToken(refreshToken);
+
+        // 4. Reload user profile to update UI
+        await _loadUserProfile();
+
+        if (mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Successfully switched to Client mode!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // 5. Navigate to client home
+          NavigationHelper.goToAndClearStack(context, '/client-home');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to switch to Client: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -261,7 +351,33 @@ class _ServiceProfilePageState extends State<ServiceProfilePage> {
                               value: _formatDate(_user!.createdAt),
                             ),
 
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 24),
+
+                            // Switch to Client Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _switchToClient,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.orange,
+                                  side: const BorderSide(color: Colors.orange, width: 2),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.swap_horiz),
+                                label: const Text(
+                                  'Switch to Client',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
 
                             // Logout Button
                             SizedBox(

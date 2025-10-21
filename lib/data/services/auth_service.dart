@@ -335,6 +335,34 @@ class AuthService {
     }
   }
 
+  // Refresh token
+  Future<AuthResponse> refreshAccessToken(String refreshToken) async {
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.refreshToken,
+        data: {'refresh_token': refreshToken},
+      );
+
+      if (response.statusCode == 200) {
+        final authResponse = AuthResponse.fromJson(response.data);
+
+        // Save new tokens and user data
+        await StorageHelper.saveTokens(
+          accessToken: authResponse.accessToken,
+          refreshToken: authResponse.refreshToken,
+        );
+        await StorageHelper.saveUserData(authResponse.user.toJson().toString());
+        await StorageHelper.saveUserType(authResponse.user.userType);
+
+        return authResponse;
+      } else {
+        throw Exception('Failed to refresh token');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Get stored user data
   Future<UserModel?> getStoredUser() async {
     final userData = await StorageHelper.getUserData();
