@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/services/order_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/location_service.dart';
+import '../../core/widgets/custom_popup.dart';
 
 class OrderRequestPage extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -22,6 +23,17 @@ class _OrderRequestPageState extends State<OrderRequestPage> {
   bool _isLoading = false;
 
   Future<void> _acceptOrder() async {
+    // Show confirmation popup
+    final confirmed = await CustomPopup.showConfirmation(
+      context: context,
+      title: 'Accept Order?',
+      message: 'Are you sure you want to accept this order? You will be directed to the navigation page.',
+      confirmText: 'Accept',
+      cancelText: 'Cancel',
+    );
+
+    if (confirmed != true) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -56,19 +68,29 @@ class _OrderRequestPageState extends State<OrderRequestPage> {
       }
 
       if (mounted) {
-        context.go('/navigation?orderId=${widget.order['id']}');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error accepting order: $e')),
+        // Show success popup
+        await CustomPopup.showSuccess(
+          context: context,
+          title: 'Order Accepted!',
+          message: 'You have successfully accepted the order. Let\'s go to the location!',
+          buttonText: 'Start Navigation',
+          barrierDismissible: false,
+          onConfirm: () {
+            context.go('/navigation?orderId=${widget.order['id']}');
+          },
         );
       }
-    } finally {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        
+        CustomPopup.showError(
+          context: context,
+          title: 'Failed to Accept',
+          message: 'Error accepting order: ${e.toString()}',
+        );
       }
     }
   }

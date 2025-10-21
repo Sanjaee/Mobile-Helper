@@ -156,9 +156,12 @@ class _ClientJobCompletedPageState extends State<ClientJobCompletedPage> {
             ),
           );
           
-          // Navigate to home
+          // Navigate to rate provider page
           if (mounted) {
-            context.go('/client-home');
+            final providerId = _order?['service_provider_id'] ?? '';
+            final providerName = 'Provider'; // You can get this from order if available
+            
+            context.go('/rate-provider?orderId=${widget.orderId}&providerId=$providerId&providerName=$providerName');
           }
         }
       }

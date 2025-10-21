@@ -26,6 +26,7 @@ import '../presentation/service/provider_job_completed_page.dart';
 import '../presentation/client/client_job_completed_page.dart';
 import '../presentation/client/client_profile_page.dart';
 import '../presentation/service/service_profile_page.dart';
+import '../presentation/client/rate_provider_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -54,6 +55,7 @@ class AppRoutes {
   static const String testPolyline = '/test-polyline';
   static const String clientProfile = '/client-profile';
   static const String serviceProfile = '/service-profile';
+  static const String rateProvider = '/rate-provider';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -246,6 +248,22 @@ class AppRoutes {
         path: serviceProfile,
         name: 'service-profile',
         builder: (context, state) => const ServiceProfilePage(),
+      ),
+      
+      // Rating page
+      GoRoute(
+        path: rateProvider,
+        name: 'rate-provider',
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'] ?? '';
+          final providerId = state.uri.queryParameters['providerId'] ?? '';
+          final providerName = state.uri.queryParameters['providerName'] ?? 'Provider';
+          return RateProviderPage(
+            orderId: orderId,
+            providerId: providerId,
+            providerName: providerName,
+          );
+        },
       ),
     ],
     errorBuilder:
