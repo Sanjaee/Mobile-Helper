@@ -99,16 +99,34 @@ class _ClientHomePageState extends State<ClientHomePage> {
                     ),
                     const SizedBox(width: 12),
                     _user != null
-                        ? ProfileAvatar(
-                            photoUrl: _user!.profilePhoto,
-                            fullName: _user!.fullName,
-                            size: 40,
-                            onTap: () => context.push('/client-profile'),
+                        ? Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.blue,
+                                width: 2,
+                              ),
+                            ),
+                            child: ProfileAvatar(
+                              photoUrl: _user!.profilePhoto,
+                              fullName: _user!.fullName,
+                              size: 40,
+                              onTap: () => context.push('/client-profile'),
+                            ),
                           )
-                        : IconButton(
-                            icon: const Icon(Icons.account_circle),
-                            iconSize: 40,
-                            onPressed: () => context.push('/client-profile'),
+                        : Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.blue,
+                                width: 2,
+                              ),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.account_circle),
+                              iconSize: 40,
+                              onPressed: () => context.push('/client-profile'),
+                            ),
                           ),
                   ],
                 ),

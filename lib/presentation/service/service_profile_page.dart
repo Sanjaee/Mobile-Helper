@@ -148,10 +148,19 @@ class _ServiceProfilePageState extends State<ServiceProfilePage> {
                         padding: const EdgeInsets.symmetric(vertical: 32),
                         child: Column(
                           children: [
-                            ProfileAvatar(
-                              photoUrl: _user!.profilePhoto,
-                              fullName: _user!.fullName,
-                              size: 100,
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.orange,
+                                  width: 4,
+                                ),
+                              ),
+                              child: ProfileAvatar(
+                                photoUrl: _user!.profilePhoto,
+                                fullName: _user!.fullName,
+                                size: 100,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Text(

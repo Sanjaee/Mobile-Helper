@@ -166,6 +166,12 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
         title: const Text('Create Order'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/client-home');
+          },
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
