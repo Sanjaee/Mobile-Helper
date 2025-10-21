@@ -15,8 +15,10 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
   final OrderService _orderService = OrderService();
   final AuthService _authService = AuthService();
   List<Map<String, dynamic>> _orders = [];
+  List<Map<String, dynamic>> _filteredOrders = [];
   bool _isLoading = true;
   String? _error;
+  String _selectedFilter = 'ALL'; // ALL, COMPLETED, CANCELLED
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
       
       setState(() {
         _orders = orders;
+        _applyFilter();
         _isLoading = false;
       });
     } catch (e) {
@@ -47,6 +50,25 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _applyFilter() {
+    setState(() {
+      if (_selectedFilter == 'ALL') {
+        _filteredOrders = _orders;
+      } else if (_selectedFilter == 'COMPLETED') {
+        _filteredOrders = _orders.where((order) => order['status'] == 'COMPLETED').toList();
+      } else if (_selectedFilter == 'CANCELLED') {
+        _filteredOrders = _orders.where((order) => order['status'] == 'CANCELLED').toList();
+      }
+    });
+  }
+
+  void _setFilter(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+      _applyFilter();
+    });
   }
 
   String _formatDate(String? dateString) {
@@ -122,6 +144,38 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
                 ],
               ),
             ),
+            // Filter Chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _FilterChip(
+                      label: 'Semua',
+                      isSelected: _selectedFilter == 'ALL',
+                      onTap: () => _setFilter('ALL'),
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    _FilterChip(
+                      label: 'Selesai',
+                      isSelected: _selectedFilter == 'COMPLETED',
+                      onTap: () => _setFilter('COMPLETED'),
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 8),
+                    _FilterChip(
+                      label: 'Dibatalkan',
+                      isSelected: _selectedFilter == 'CANCELLED',
+                      onTap: () => _setFilter('CANCELLED'),
+                      color: Colors.red,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: _isLoading
                   ? const Center(child: LoadingIndicator())
@@ -141,16 +195,20 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
                             ],
                           ),
                         )
-                      : _orders.isEmpty
-                          ? const Center(
+                      : _filteredOrders.isEmpty
+                          ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.history, size: 64, color: Colors.grey),
-                                  SizedBox(height: 16),
+                                  const Icon(Icons.history, size: 64, color: Colors.grey),
+                                  const SizedBox(height: 16),
                                   Text(
-                                    'Belum ada riwayat order',
-                                    style: TextStyle(color: Colors.grey),
+                                    _selectedFilter == 'ALL' 
+                                        ? 'Belum ada riwayat order'
+                                        : _selectedFilter == 'COMPLETED'
+                                            ? 'Belum ada order selesai'
+                                            : 'Belum ada order dibatalkan',
+                                    style: const TextStyle(color: Colors.grey),
                                   ),
                                 ],
                               ),
@@ -159,10 +217,10 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
                               onRefresh: _loadOrders,
                               child: ListView.separated(
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _orders.length,
+                                itemCount: _filteredOrders.length,
                                 separatorBuilder: (context, index) => const SizedBox(height: 12),
                                 itemBuilder: (context, index) {
-                                  final order = _orders[index];
+                                  final order = _filteredOrders[index];
                                   
                                   return _HistoryCard(
                                     clientName: 'Client',
@@ -178,6 +236,47 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
                             ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 14,
+          ),
         ),
       ),
     );
