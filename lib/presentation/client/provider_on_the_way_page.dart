@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
@@ -480,23 +481,27 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
         // Show dialog when user tries to go back
         _showExitDialog();
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Provider On The Way'),
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-          automaticallyImplyLeading: false, // Remove back button
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.white,
         ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _order == null
-              ? const Center(child: Text('Order not found'))
-              : Column(
-                  children: [
-                    // Map
-                    Expanded(
-                      flex: 2,
-                      child: GoogleMap(
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          backgroundColor: Colors.white,
+          body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _order == null
+                ? const Center(child: Text('Order not found'))
+                : SafeArea(
+                    top: false, // Allow map to extend under status bar
+                    child: Column(
+                      children: [
+                        // Map
+                        Expanded(
+                          flex: 2,
+                          child: GoogleMap(
                         initialCameraPosition: CameraPosition(
                           target: LatLng(
                             _order!['service_latitude'],
@@ -626,6 +631,8 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                     ),
                   ],
                 ),
+              ),
+        ),
       ),
     );
   }
