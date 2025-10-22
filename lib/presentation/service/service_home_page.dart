@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:go_router/go_router.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/navigation.dart';
 import '../../data/services/auth_service.dart';
@@ -20,8 +19,9 @@ class ServiceHomePage extends StatefulWidget {
 class _ServiceHomePageState extends State<ServiceHomePage> {
   final AuthService _authService = AuthService();
   final OrderService _orderService = OrderService();
-  final PageController _pageController = PageController();
+  late final PageController _pageController;
   Timer? _orderTimer;
+  Timer? _autoPlayTimer;
   Map<String, dynamic>? _pendingOrder;
   UserModel? _user;
   
@@ -29,26 +29,29 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
     'https://images.tokopedia.net/img/cache/1208/NsjrJu/2025/10/2/6df4fcc2-9ec1-4083-ae5c-a67b3ead7a70.jpg',
     'https://images.tokopedia.net/img/cache/1208/NsjrJu/2025/10/16/dbadf1ea-8b6b-43b1-83dd-6b6b89acc152.jpg',
   ];
+  
+  // For infinite scroll
+  static const int _initialPage = 10000;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _initialPage);
     _loadUserProfile();
     _startOrderPolling();
     _startAutoPlay();
   }
   
   void _startAutoPlay() {
-    Future.delayed(const Duration(seconds: 3), () {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted && _pageController.hasClients) {
-        int nextPage = (_pageController.page?.toInt() ?? 0) + 1;
-        if (nextPage >= _bannerImages.length) nextPage = 0;
-        
+        final currentPage = _pageController.page?.toInt() ?? _initialPage;
         _pageController.animateToPage(
-          nextPage,
+          currentPage + 1,
           duration: const Duration(milliseconds: 800),
           curve: Curves.easeInOut,
-        ).then((_) => _startAutoPlay());
+        );
       }
     });
   }
@@ -109,6 +112,7 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
   @override
   void dispose() {
     _orderTimer?.cancel();
+    _autoPlayTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -190,14 +194,14 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
                       children: [
                         PageView.builder(
                           controller: _pageController,
-                          itemCount: _bannerImages.length,
                           itemBuilder: (context, index) {
+                            final imageIndex = index % _bannerImages.length;
                             return Container(
                               margin: const EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 image: DecorationImage(
-                                  image: NetworkImage(_bannerImages[index]),
+                                  image: NetworkImage(_bannerImages[imageIndex]),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -210,17 +214,31 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
                           left: 0,
                           right: 0,
                           child: Center(
-                            child: SmoothPageIndicator(
-                              controller: _pageController,
-                              count: _bannerImages.length,
-                              effect: ExpandingDotsEffect(
-                                activeDotColor: Colors.white,
-                                dotColor: Colors.white.withOpacity(0.5),
-                                dotHeight: 6,
-                                dotWidth: 6,
-                                expansionFactor: 3,
-                                spacing: 4,
-                              ),
+                            child: AnimatedBuilder(
+                              animation: _pageController,
+                              builder: (context, child) {
+                                final page = _pageController.hasClients 
+                                    ? (_pageController.page ?? _initialPage)
+                                    : _initialPage.toDouble();
+                                final activeIndex = (page % _bannerImages.length).round() % _bannerImages.length;
+                                
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(_bannerImages.length, (index) {
+                                    return Container(
+                                      width: activeIndex == index ? 18 : 6,
+                                      height: 6,
+                                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(3),
+                                        color: activeIndex == index 
+                                            ? Colors.white 
+                                            : Colors.white.withOpacity(0.5),
+                                      ),
+                                    );
+                                  }),
+                                );
+                              },
                             ),
                           ),
                         ),
