@@ -12,6 +12,7 @@ import '../../data/services/google_directions_service.dart';
 import '../../data/services/websocket_service.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/utils/jwt_utils.dart';
+import '../chat/chat_page.dart';
 
 class NavigationPage extends StatefulWidget {
   final String orderId;
@@ -600,6 +601,24 @@ class _NavigationPageState extends State<NavigationPage> {
                                     ),
                                   ],
                                 ),
+                              ),
+                              // Chat button
+                              IconButton(
+                                icon: const Icon(Icons.chat_bubble_outline),
+                                color: const Color(0xFF00BFA5),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        orderId: widget.orderId,
+                                        orderNumber: _order!['order_number'],
+                                        userType: 'provider',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                tooltip: 'Chat with Client',
                               ),
                               // ETA info
                               if (_etaMinutes > 0)

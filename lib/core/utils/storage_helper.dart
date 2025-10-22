@@ -22,6 +22,11 @@ class StorageHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_accessTokenKey);
   }
+
+  // Alias for getAccessToken
+  static Future<String?> getToken() async {
+    return getAccessToken();
+  }
   
   static Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();

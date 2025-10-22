@@ -10,6 +10,7 @@ import '../../data/services/google_directions_service.dart';
 import '../../data/services/websocket_service.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/utils/jwt_utils.dart';
+import '../chat/chat_page.dart';
 
 class ProviderOnTheWayPage extends StatefulWidget {
   final String orderId;
@@ -570,6 +571,24 @@ class _ProviderOnTheWayPageState extends State<ProviderOnTheWayPage> {
                                     ),
                                   ],
                                 ),
+                              ),
+                              // Chat button
+                              IconButton(
+                                icon: const Icon(Icons.chat_bubble_outline),
+                                color: Colors.green,
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        orderId: widget.orderId,
+                                        orderNumber: _order!['order_number'],
+                                        userType: 'client',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                tooltip: 'Chat with Provider',
                               ),
                               // ETA info
                               if (_etaMinutes > 0)

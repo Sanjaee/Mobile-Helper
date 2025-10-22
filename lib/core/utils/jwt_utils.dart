@@ -2,6 +2,10 @@ import 'dart:convert';
 
 class JwtUtils {
   // Decode JWT token and extract payload
+  static Map<String, dynamic> decode(String token) {
+    return decodeJwtPayload(token) ?? {};
+  }
+
   static Map<String, dynamic>? decodeJwtPayload(String token) {
     try {
       // Split the token into parts
