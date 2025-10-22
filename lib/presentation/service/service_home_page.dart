@@ -22,8 +22,11 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
   late final PageController _pageController;
   Timer? _orderTimer;
   Timer? _autoPlayTimer;
-  Map<String, dynamic>? _pendingOrder;
   UserModel? _user;
+  
+  // Track dismissed orders so they don't show again until refresh
+  final Set<String> _dismissedOrders = {};
+  bool _isShowingOrder = false;
   
   final List<String> _bannerImages = [
     'https://images.tokopedia.net/img/cache/1208/NsjrJu/2025/10/2/6df4fcc2-9ec1-4083-ae5c-a67b3ead7a70.jpg',
@@ -84,29 +87,40 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
       // In a real app, this would be done via RabbitMQ notifications
       final orders = await _orderService.getAllPendingOrders();
       
-      if (orders.isNotEmpty && _pendingOrder == null) {
-        setState(() {
-          _pendingOrder = orders.first;
-        });
+      if (orders.isNotEmpty && !_isShowingOrder) {
+        // Find first order that hasn't been dismissed
+        final newOrder = orders.firstWhere(
+          (order) => !_dismissedOrders.contains(order['id']?.toString() ?? order['order_number']),
+          orElse: () => {},
+        );
+        
+        if (newOrder.isNotEmpty && mounted) {
+          _showOrderRequest(newOrder);
+        }
       }
     } catch (e) {
       print('Error checking for new orders: $e');
     }
   }
 
-  void _showOrderRequest() {
-    if (_pendingOrder != null) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => OrderRequestPage(order: _pendingOrder!),
-      ).then((_) {
-        setState(() {
-          _pendingOrder = null;
-        });
-      });
-    }
+  void _showOrderRequest(Map<String, dynamic> order) {
+    if (_isShowingOrder) return;
+    
+    _isShowingOrder = true;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      builder: (context) => OrderRequestPage(order: order),
+    ).then((_) {
+      // Mark this order as dismissed so it won't show again until refresh
+      final orderId = order['id']?.toString() ?? order['order_number'];
+      _dismissedOrders.add(orderId);
+      _isShowingOrder = false;
+    });
   }
 
   @override
@@ -121,222 +135,162 @@ class _ServiceHomePageState extends State<ServiceHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search Bar and Profile
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.search, color: Colors.grey[600], size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Cari layanan',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Search Bar and Profile
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(25),
                         ),
-                        const SizedBox(width: 12),
-                        _user != null
-                            ? Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.orange,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: ProfileAvatar(
-                                  photoUrl: _user!.profilePhoto,
-                                  fullName: _user!.fullName,
-                                  size: 40,
-                                  onTap: () => context.push('/service-profile'),
-                                ),
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.orange,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.account_circle),
-                                  iconSize: 40,
-                                  onPressed: () => context.push('/service-profile'),
-                                ),
-                              ),
-                      ],
-                    ),
-                  ),
-
-                  // Carousel Banner
-                  SizedBox(
-                    height: 160,
-                    child: Stack(
-                      children: [
-                        PageView.builder(
-                          controller: _pageController,
-                          itemBuilder: (context, index) {
-                            final imageIndex = index % _bannerImages.length;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                image: DecorationImage(
-                                  image: NetworkImage(_bannerImages[imageIndex]),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        // Page indicators
-                        Positioned(
-                          bottom: 12,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: AnimatedBuilder(
-                              animation: _pageController,
-                              builder: (context, child) {
-                                final page = _pageController.hasClients 
-                                    ? (_pageController.page ?? _initialPage)
-                                    : _initialPage.toDouble();
-                                final activeIndex = (page % _bannerImages.length).round() % _bannerImages.length;
-                                
-                                return Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: List.generate(_bannerImages.length, (index) {
-                                    return Container(
-                                      width: activeIndex == index ? 18 : 6,
-                                      height: 6,
-                                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(3),
-                                        color: activeIndex == index 
-                                            ? Colors.white 
-                                            : Colors.white.withOpacity(0.5),
-                                      ),
-                                    );
-                                  }),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Operasional Grid
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.count(
-                      crossAxisCount: 4,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 0.85,
-                      children: [
-                        _MenuItem(
-                          icon: Icons.map,
-                          label: 'Map',
-                          onTap: () => NavigationHelper.pushTo(context, '/service-map'),
-                        ),
-                        _MenuItem(icon: Icons.assignment, label: 'Orders'),
-                        _MenuItem(icon: Icons.inventory_2, label: 'Inventory'),
-                        _MenuItem(icon: Icons.people, label: 'Clients'),
-                        _MenuItem(icon: Icons.analytics, label: 'Reports'),
-                        _MenuItem(icon: Icons.payments, label: 'Payments'),
-                        _MenuItem(icon: Icons.support_agent, label: 'Support'),
-                        _MenuItem(icon: Icons.more_horiz, label: 'More'),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
-          ),
-
-          // Order notification
-          if (_pendingOrder != null)
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: GestureDetector(
-                onTap: _showOrderRequest,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.notifications, color: Colors.white),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+                        child: Row(
                           children: [
-                            const Text(
-                              'New Order Available!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
+                            Icon(Icons.search, color: Colors.grey[600], size: 20),
+                            const SizedBox(width: 8),
                             Text(
-                              'Order #${_pendingOrder!['order_number']}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
+                              'Cari layanan',
+                              style: TextStyle(color: Colors.grey[600], fontSize: 14),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward, color: Colors.white),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    _user != null
+                        ? Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.orange,
+                                width: 2,
+                              ),
+                            ),
+                            child: ProfileAvatar(
+                              photoUrl: _user!.profilePhoto,
+                              fullName: _user!.fullName,
+                              size: 40,
+                              onTap: () => context.push('/service-profile'),
+                            ),
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.orange,
+                                width: 2,
+                              ),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.account_circle),
+                              iconSize: 40,
+                              onPressed: () => context.push('/service-profile'),
+                            ),
+                          ),
+                  ],
                 ),
               ),
-            ),
-        ],
+
+              // Carousel Banner
+              SizedBox(
+                height: 160,
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _pageController,
+                      itemBuilder: (context, index) {
+                        final imageIndex = index % _bannerImages.length;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(
+                              image: NetworkImage(_bannerImages[imageIndex]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // Page indicators
+                    Positioned(
+                      bottom: 12,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: AnimatedBuilder(
+                          animation: _pageController,
+                          builder: (context, child) {
+                            final page = _pageController.hasClients 
+                                ? (_pageController.page ?? _initialPage)
+                                : _initialPage.toDouble();
+                            final activeIndex = (page % _bannerImages.length).round() % _bannerImages.length;
+                            
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(_bannerImages.length, (index) {
+                                return Container(
+                                  width: activeIndex == index ? 18 : 6,
+                                  height: 6,
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(3),
+                                    color: activeIndex == index 
+                                        ? Colors.white 
+                                        : Colors.white.withOpacity(0.5),
+                                  ),
+                                );
+                              }),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Operasional Grid
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.count(
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 0.85,
+                  children: [
+                    _MenuItem(
+                      icon: Icons.map,
+                      label: 'Map',
+                      onTap: () => NavigationHelper.pushTo(context, '/service-map'),
+                    ),
+                    _MenuItem(icon: Icons.assignment, label: 'Orders'),
+                    _MenuItem(icon: Icons.inventory_2, label: 'Inventory'),
+                    _MenuItem(icon: Icons.people, label: 'Clients'),
+                    _MenuItem(icon: Icons.analytics, label: 'Reports'),
+                    _MenuItem(icon: Icons.payments, label: 'Payments'),
+                    _MenuItem(icon: Icons.support_agent, label: 'Support'),
+                    _MenuItem(icon: Icons.more_horiz, label: 'More'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 80),
+            ],
+          ),
+        ),
       ),
     );
   }
